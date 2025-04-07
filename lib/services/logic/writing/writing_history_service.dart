@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class WritingHistoryService {
+class WritingHistoryLogicService {
   static Future<void> save(String sentence, String imagePath) async {
     final prefs = await SharedPreferences.getInstance();
     final entry = {

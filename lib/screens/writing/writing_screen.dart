@@ -5,12 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:SeeWriteSay/constants/api_constants.dart';
-import 'package:SeeWriteSay/model/img_info.dart';
+import 'package:SeeWriteSay/models/image_model.dart';
 
 class WritingScreen extends StatefulWidget {
-  final ImgInfo? imgInfo;
+  final ImageModel? imageModel;
 
-  const WritingScreen({super.key, this.imgInfo});
+  const WritingScreen({super.key, this.imageModel});
 
   @override
   State<WritingScreen> createState() => _WritingScreenState();
@@ -75,7 +75,7 @@ class _WritingScreenState extends State<WritingScreen> {
 
     final shouldSave = await _showOverwriteDialog();
     if (shouldSave) {
-      await saveWritingHistory(userText, widget.imgInfo?.imgPath ?? '');
+      await saveWritingHistory(userText, widget.imageModel?.path ?? '');
     }
 
     FocusScope.of(context).unfocus();
@@ -83,7 +83,7 @@ class _WritingScreenState extends State<WritingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await fetchAIFeedback(userText, widget.imgInfo?.imgName ?? '');
+      final result = await fetchAIFeedback(userText, widget.imageModel?.name ?? '');
       setState(() {
         _correctedText = result['correction'] ?? '';
         _feedback = result['feedback'] ?? '';
@@ -113,7 +113,7 @@ class _WritingScreenState extends State<WritingScreen> {
     if (token == null) throw Exception("❌ JWT 토큰 없음. 로그인 필요");
 
     final response = await http.post(
-      Uri.parse(ApiConstants.generateFeedback),
+      Uri.parse(ApiConstants.feedbackGenerateUrl),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ class _WritingScreenState extends State<WritingScreen> {
   Future<void> _openHistory() async {
     final result = await context.pushNamed(
       'history',
-      queryParameters: {'imagePath': widget.imgInfo?.imgPath ?? ''},
+      queryParameters: {'imagePath': widget.imageModel?.path ?? ''},
     );
     if (result != null && result is Map<String, dynamic>) {
       setState(() {
@@ -197,10 +197,10 @@ class _WritingScreenState extends State<WritingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.imgInfo != null) ...[
+                if (widget.imageModel != null) ...[
                   Center(
                     child: Image.network(
-                      '${ApiConstants.baseUrl}${widget.imgInfo?.imgPath ?? "/images/default.png"}',
+                      '${ApiConstants.baseUrl}${widget.imageModel?.path ?? "/images/default.png"}',
                       height: 200,
                       errorBuilder: (context, error, stackTrace) =>
                           Icon(Icons.broken_image, size: 100),

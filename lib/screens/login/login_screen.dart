@@ -1,9 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:SeeWriteSay/service/api/api_service.dart';
+import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/constants/api_constants.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -22,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleLogin(BuildContext context) async {
     var loginUrl = ApiConstants.loginUrl;
-    await ApiService.launchUrlExternal(loginUrl); // 실제 로그인 URL로 연결
+    await CommonLogicService.launchUrlExternal(loginUrl); // 실제 로그인 URL로 연결
   }
 
   Future<void> _handleGuestLogin(BuildContext context) async {

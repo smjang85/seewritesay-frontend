@@ -52,5 +52,6 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/app_icon.png
-    - .env
+    - .env.prod
+    - .env.dev
   uses-material-design: true

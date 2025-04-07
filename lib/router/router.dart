@@ -1,24 +1,17 @@
-import 'package:SeeWriteSay/screen/login/login_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:SeeWriteSay/screen/backup/splash_screen.dart';
-import 'package:SeeWriteSay/screen/picture/picture_screen.dart';
-import 'package:SeeWriteSay/screen/reading/reading_screen.dart';
-import 'package:SeeWriteSay/screen/writing/writing_screen.dart';
-import 'package:SeeWriteSay/screen/writing/writing_history_screen.dart';
-import 'package:SeeWriteSay/screen/oauth2/auth_callback_screen.dart';
-import 'package:SeeWriteSay/model/img_info.dart';
+import 'package:SeeWriteSay/screens/login/login_screen.dart';
+import 'package:SeeWriteSay/screens/picture/picture_screen.dart';
+import 'package:SeeWriteSay/screens/reading/reading_screen.dart';
+import 'package:SeeWriteSay/screens/writing/writing_screen.dart';
+import 'package:SeeWriteSay/screens/writing/writing_history_screen.dart';
+import 'package:SeeWriteSay/screens/auth/auth_callback_screen.dart';
+import 'package:SeeWriteSay/models/image_model.dart';
 
 final GoRouter appRouter = GoRouter(
   debugLogDiagnostics: true, // 로그 출력용
   initialLocation: '/login',
   routes: [
-    GoRoute(
-      path: '/',
-      name: 'splash',
-      builder: (context, state) => SplashScreen(),
-    ),
     GoRoute(
       path: '/login',
       name: 'login',
@@ -33,8 +26,8 @@ final GoRouter appRouter = GoRouter(
       path: '/writing',
       name: 'writing',
       builder: (context, state) {
-        final imgInfo = state.extra as ImgInfo?;
-        return WritingScreen(imgInfo: imgInfo);
+        final imageModel = state.extra as ImageModel?;
+        return WritingScreen(imageModel: imageModel);
       },
     ),
     GoRoute(

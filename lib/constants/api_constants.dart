@@ -5,9 +5,10 @@ class ApiConstants {
   static String get loginUrl => '$baseUrl' + dotenv.env['GOOGLE_LOGIN_URL']!;
 
   static String get feedbackUrl => '$baseUrl/api/v1/feedback';
-  static String get generateFeedback => '$baseUrl/api/v1/feedback/generate';
-  static String get userSettings => '$baseUrl/api/v1/protected/settings';
-  static String get protectedHello => '$baseUrl/api/v1/protected/hello';
+  static String get feedbackGenerateUrl => '$baseUrl/api/v1/feedback/generate';
 
-  static String get imgList => '$baseUrl/api/v1/images';
+  static String get userSettingsUrl => '$baseUrl/api/v1/user/settings';
+  static String get userHelloUrl => '$baseUrl/api/v1/user/hello';
+
+  static String get imagesUrl => '$baseUrl/api/v1/images';
 }
