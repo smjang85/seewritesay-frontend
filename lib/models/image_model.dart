@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class ImageModel {
   final int id;
   final String name;
@@ -14,7 +16,7 @@ class ImageModel {
   });
 
   factory ImageModel.fromJson(Map<String, dynamic> json) {
-    print("🧾 받은 JSON: $json"); // 디버깅용
+    debugPrint("🧾 받은 JSON: $json"); // 디버깅용
 
     return ImageModel(
       id: json['id'],

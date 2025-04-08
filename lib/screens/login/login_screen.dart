@@ -1,41 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
-import 'package:SeeWriteSay/constants/api_constants.dart';
+import 'package:provider/provider.dart';
+import 'package:SeeWriteSay/providers/login/login_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => LoginProvider(),
+      child: const LoginScreenContent(),
+    );
+  }
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  @override
-  void initState() {
-    super.initState();
-    FlutterNativeSplash.remove(); // ✅ 스플래시 제거
-  }
-
-  Future<void> _handleLogin(BuildContext context) async {
-    var loginUrl = ApiConstants.loginUrl;
-    await CommonLogicService.launchUrlExternal(loginUrl); // 실제 로그인 URL로 연결
-  }
-
-  Future<void> _handleGuestLogin(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('jwt_token', 'dummy_token'); // 체험 로그인
-    await prefs.setBool('guest_user', true);
-
-    if (context.mounted) {
-      context.goNamed('picture');
-    }
-  }
+class LoginScreenContent extends StatelessWidget {
+  const LoginScreenContent({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<LoginProvider>();
+
+    FlutterNativeSplash.remove(); // ✅ 스플래시 제거
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       body: Center(
@@ -62,11 +50,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () => _handleLogin(context),
+                onPressed: () => provider.loginWithGoogle(context),
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => _handleGuestLogin(context),
+                onPressed: provider.isLoading
+                    ? null
+                    : () => provider.loginAsGuest(context),
                 child: const Text(
                   '비로그인으로 체험하기',
                   style: TextStyle(fontSize: 16),

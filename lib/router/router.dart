@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:SeeWriteSay/screens/login/login_screen.dart';
@@ -26,8 +27,23 @@ final GoRouter appRouter = GoRouter(
       path: '/writing',
       name: 'writing',
       builder: (context, state) {
-        final imageModel = state.extra as ImageModel?;
-        return WritingScreen(imageModel: imageModel);
+        final imageId = int.tryParse(state.uri.queryParameters['imageId'] ?? '0') ?? 0;
+        final imagePath = state.uri.queryParameters['imagePath'] ?? '';
+        final imageName = state.uri.queryParameters['imageName'] ?? 'Untitled';
+        final imageDescription = state.uri.queryParameters['imageDescription'] ?? '';
+        final sentence = state.uri.queryParameters['sentence']; // ✅ 추가
+
+        final imageModel = ImageModel(
+          id: imageId,
+          path: imagePath,
+          name: imageName,
+          description: imageDescription,
+        );
+
+        return WritingScreen(
+          imageModel: imageModel,
+          initialSentence: sentence, // ✅ 여기도 추가
+        );
       },
     ),
     GoRoute(
@@ -39,16 +55,20 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/history',
-      name: 'history',
-      builder: (context, state) => const WritingHistoryScreen(),
+      path: '/writingHistory',
+      name: 'writingHistory',
+      builder: (context, state) {
+        final imageIdParam = state.uri.queryParameters['imageId'];
+        final imageId = int.tryParse(imageIdParam ?? '');
+        return WritingHistoryScreen(imageId: imageId);
+      },
     ),
     GoRoute(
       path: '/googleAuth/callback',
       name: 'googleAuthCallback',
       builder: (context, state) {
         final token = state.uri.queryParameters['token'] ?? '';
-        print("✅ token from query: $token");
+        debugPrint("✅ token from query: $token");
         return AuthCallbackScreen(token: token);
       },
     ),

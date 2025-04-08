@@ -9,7 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_sign_in: ^6.1.6 # 최신 버전 확인
+  cached_network_image: ^3.3.1
+  mocktail: ^1.0.4
+  google_sign_in: ^6.1.6
+  provider: ^6.1.2
   flutter_dotenv: ^5.1.0
   url_launcher: ^6.2.5
   http: ^1.2.1
@@ -25,10 +28,13 @@ dependencies:
   go_router: ^13.2.0
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.14.3
-  flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  flutter_launcher_icons: ^0.14.3
+  flutter_lints: ^5.0.0
 
 flutter_launcher_icons:
   android: true

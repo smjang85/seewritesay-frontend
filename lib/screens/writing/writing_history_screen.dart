@@ -1,94 +1,161 @@
-import 'dart:convert';
+import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'package:SeeWriteSay/providers/writing/writing_history_provider.dart';
+import 'package:SeeWriteSay/models/image_model.dart';
+import 'package:SeeWriteSay/utils/navigation_helpers.dart';
+import 'package:SeeWriteSay/constants/api_constants.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-class WritingHistoryScreen extends StatefulWidget {
-  final String? imagePathFilter;
+class WritingHistoryScreen extends StatelessWidget {
+  final int? imageId;
 
-  const WritingHistoryScreen({super.key, this.imagePathFilter});
-
-  @override
-  State<WritingHistoryScreen> createState() => _WritingHistoryScreenState();
-}
-
-class _WritingHistoryScreenState extends State<WritingHistoryScreen> {
-  List<Map<String, dynamic>> _history = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHistory();
-  }
-
-  Future<void> _loadHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> historyList =
-        prefs.getStringList('writingHistory') ?? [];
-
-    final List<Map<String, dynamic>> filtered =
-        historyList.map((e) => jsonDecode(e) as Map<String, dynamic>).where((
-          entry,
-        ) {
-          if (widget.imagePathFilter == null) return true;
-          return entry['image'] == widget.imagePathFilter;
-        }).toList();
-
-    filtered.sort(
-      (a, b) => (b['timestamp'] ?? '').compareTo(a['timestamp'] ?? ''),
-    );
-
-    setState(() {
-      _history = filtered;
-    });
-  }
-
-  Future<void> _deleteHistoryItem(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    _history.removeAt(index);
-    final newList = _history.map((e) => jsonEncode(e)).toList();
-    await prefs.setStringList('writingHistory', newList);
-    setState(() {});
-  }
+  const WritingHistoryScreen({super.key, this.imageId});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("작문 히스토리")),
-      body:
-          _history.isEmpty
-              ? const Center(child: Text("저장된 작문이 없어요."))
-              : ListView.separated(
-                itemCount: _history.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) {
-                  final item = _history[index];
-                  return ListTile(
-                    leading: const Icon(Icons.edit_note),
-                    title: Text(item['sentence'] ?? ''),
-                    subtitle: Text(_formatTimestamp(item['timestamp'] ?? '')),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _deleteHistoryItem(index),
-                    ),
-                    onTap: () {
-                      context.pop(item); // ✅ go_router pop
-                    },
-                  );
-                },
-              ),
+    return ChangeNotifierProvider(
+      create: (_) =>
+      WritingHistoryProvider(imageId: imageId)
+        ..loadHistory(),
+      child: const WritingHistoryContent(),
     );
   }
+}
 
-  String _formatTimestamp(String raw) {
-    try {
-      final dt = DateTime.parse(raw);
-      return "${dt.year}-${_twoDigits(dt.month)}-${_twoDigits(dt.day)} "
-          "${_twoDigits(dt.hour)}:${_twoDigits(dt.minute)}:${_twoDigits(dt.second)}";
-    } catch (_) {
-      return raw;
-    }
+
+class WritingHistoryContent extends StatelessWidget {
+  const WritingHistoryContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<WritingHistoryProvider>();
+    final writingHistory = provider.history;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("✍️ 작문 히스토리")),
+      body: writingHistory.isEmpty
+          ? const Center(child: Text("저장된 작문이 없어요."))
+          : ListView.separated(
+        itemCount: writingHistory.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final entry = writingHistory[index];
+          final thumbnail = entry['imagePath'] ?? '';
+          final description = entry['imageDescription'] ?? '';
+          final shortDesc = description.length > 30
+              ? '${description.substring(0, 30)}...'
+              : description;
+
+          return ListTile(
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: '${ApiConstants.baseUrl}$thumbnail',
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                const SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                errorWidget: (_, __, ___) =>
+                const Icon(Icons.image_not_supported, size: 48),
+              ),
+            ),
+            title: Text(
+              entry['sentence'] ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (shortDesc.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      shortDesc,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: Text(
+                    CommonLogicService.formatDateTime(entry['timestamp'] ?? ''),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) =>
+                      AlertDialog(
+                        title: const Text("삭제하시겠어요?"),
+                        content: const Text("이 작문 기록을 삭제할까요?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("취소"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text("삭제"),
+                          ),
+                        ],
+                      ),
+                );
+                if (confirm ?? false) {
+                  await provider.deleteHistoryItem(index);
+                }
+              },
+            ),
+            onTap: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) =>
+                    AlertDialog(
+                      title: const Text("작문하기로 이동"),
+                      content: const Text("이 작문을 불러와서 수정하거나 이어서 작성할까요?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("아니오"),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text("예"),
+                        ),
+                      ],
+                    ),
+              );
+
+              if (confirm == true) {
+                Navigator.pop(context);
+                NavigationHelpers.goToWritingScreen(
+                  context,
+                  ImageModel(
+                    id: entry['imageId'],
+                    path: entry['imagePath'],
+                    name: entry['imageName'],
+                    description: entry['imageDescription'],
+                  ),
+                  sentence: entry['sentence'],
+                );
+              }
+            },
+          );
+        },
+      ),
+    );
   }
-
-  String _twoDigits(int n) => n.toString().padLeft(2, '0');
 }
