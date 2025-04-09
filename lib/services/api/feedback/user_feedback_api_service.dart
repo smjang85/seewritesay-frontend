@@ -17,8 +17,12 @@ class UserFeedbackApiService {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['remainingCount'] ?? 0;
+      final Map<String, dynamic> json = jsonDecode(response.body);
+      debugPrint("✅ json: $json");
+
+      final int count = json['data']['remainingCount'];
+
+      return count;
     } else {
       throw Exception("❌ 피드백 횟수 조회 실패: ${response.statusCode} ${response.body}");
     }
@@ -38,7 +42,7 @@ class UserFeedbackApiService {
       body: jsonEncode({'imageId': imageId}),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode != 204) {
       throw Exception("❌ 피드백 감소 실패: ${response.statusCode} ${response.body}");
     }
   }

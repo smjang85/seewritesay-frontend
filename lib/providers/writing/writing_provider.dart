@@ -1,3 +1,4 @@
+import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
@@ -104,9 +105,8 @@ class WritingProvider extends ChangeNotifier {
       remainingFeedback--;
     } catch (e) {
       debugPrint("❌ GPT 오류 발생: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("AI 피드백 요청에 실패했어요.")));
+      CommonLogicService.showErrorSnackBar(context, e);
+
     } finally {
       isLoading = false;
       notifyListeners();

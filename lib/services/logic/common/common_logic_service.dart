@@ -90,4 +90,64 @@ class CommonLogicService {
       await prefs.remove(key);
     }
   }
+
+
+  /// ❗ 기본 다이얼로그 방식 오류 처리
+  static void showErrorDialog(BuildContext context, Object error) {
+    String raw = error.toString().replaceAll('Exception: ', '');
+    String msg = raw;
+
+    try {
+      final jsonStart = raw.indexOf('{');
+      if (jsonStart != -1) {
+        final jsonPart = raw.substring(jsonStart);
+        final decoded = jsonDecode(jsonPart);
+        if (decoded is Map<String, dynamic>) {
+          msg = decoded['message'] ?? decoded['errorCode'] ?? raw;
+        }
+      }
+    } catch (_) {
+      msg = raw;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("⚠️ 오류 발생"),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("확인"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ SnackBar(토스트) 방식 오류 처리
+  static void showErrorSnackBar(BuildContext context, Object error) {
+    String raw = error.toString().replaceAll('Exception: ', '');
+    String msg = raw;
+
+    try {
+      final jsonStart = raw.indexOf('{');
+      if (jsonStart != -1) {
+        final jsonPart = raw.substring(jsonStart);
+        final decoded = jsonDecode(jsonPart);
+        if (decoded is Map<String, dynamic>) {
+          msg = decoded['message'] ?? decoded['errorCode'] ?? raw;
+        }
+      }
+    } catch (_) {
+      msg = raw;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 }

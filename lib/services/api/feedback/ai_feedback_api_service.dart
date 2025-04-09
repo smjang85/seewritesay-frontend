@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/constants/api_constants.dart';
@@ -21,12 +22,14 @@ class AiFeedbackApiService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes)); // ✅ 인코딩 문제 방지
+      debugPrint("fetchAIFeedback data : ${data}");
       return {
         'correction': data['correction'] ?? sentence,
         'feedback': data['feedback'] ?? '',
       };
     } else {
-      throw Exception("❌ GPT 피드백 API 실패: ${response.statusCode} ${response.body}");
+      throw Exception(response.body);
+
     }
   }
 
