@@ -5,9 +5,9 @@ import 'package:SeeWriteSay/screens/login/login_screen.dart';
 import 'package:SeeWriteSay/screens/picture/picture_screen.dart';
 import 'package:SeeWriteSay/screens/reading/reading_screen.dart';
 import 'package:SeeWriteSay/screens/writing/writing_screen.dart';
-import 'package:SeeWriteSay/screens/writing/writing_history_screen.dart';
 import 'package:SeeWriteSay/screens/auth/auth_callback_screen.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
+import 'package:SeeWriteSay/screens/history/history_writing_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   debugLogDiagnostics: true, // 로그 출력용
@@ -47,20 +47,32 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/reading',
       name: 'reading',
-      builder: (context, state) {
-        final text = state.uri.queryParameters['text'] ?? '';
-        return ReadingScreen(sentence: text);
+      path: '/reading',
+      pageBuilder: (context, state) {
+        final sentence = state.uri.queryParameters['text'];
+        final imagePath = state.uri.queryParameters['imagePath'];
+
+        return MaterialPage(
+          child: ReadingScreen(
+            sentence: sentence,
+            imagePath: imagePath,
+          ),
+        );
       },
     ),
     GoRoute(
-      path: '/writingHistory',
-      name: 'writingHistory',
+      path: '/historyWriting',
+      name: 'historyWriting',
       builder: (context, state) {
+        final initialWithCategory = state.uri.queryParameters['initialWithCategory'] == 'true';
         final imageIdParam = state.uri.queryParameters['imageId'];
-        final imageId = int.tryParse(imageIdParam ?? '');
-        return WritingHistoryScreen(imageId: imageId);
+        final imageId = imageIdParam != null ? int.tryParse(imageIdParam) : null;
+
+        return HistoryWritingScreen(
+          initialWithCategory: initialWithCategory,
+          imageId: imageId,
+        );
       },
     ),
     GoRoute(

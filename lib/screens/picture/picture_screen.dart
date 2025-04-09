@@ -1,11 +1,10 @@
+import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:SeeWriteSay/widgets/app_drawer_menu.dart';
 import 'package:SeeWriteSay/providers/picture/picture_provider.dart';
 import 'package:SeeWriteSay/providers/login/login_provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class PictureScreen extends StatefulWidget {
   @override
@@ -53,93 +52,108 @@ class _PictureScreenState extends State<PictureScreen> {
   }
 
   Widget _buildImageSection(image, bool alreadyUsed, PictureProvider provider) {
-    return Stack(
+    return image != null
+        ? CommonImageViewer(
+      imagePath: image.path,
+      showCheck: alreadyUsed,
+      height: 380, // 크게!
+      borderRadius: 16, // 더 둥글게 하고 싶으면 늘려도 됨
+    )
+        : const Center(child: Icon(Icons.image_not_supported));
+  }
+
+  Widget _buildActionButtons(image, PictureProvider provider) {
+    final categories = provider.categories;
+    final selectedCategory = provider.selectedCategory;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+
+        // 🔁 다른 그림 아이콘 버튼 (중앙 정렬)
         Center(
-          child:
-              image != null
-                  ? CachedNetworkImage(
-                    imageUrl: '${ApiConstants.baseUrl}${image.path}',
-                    height: 400,
-                    fit: BoxFit.cover,
-                    placeholder:
-                        (context, url) =>
-                            const Center(child: CircularProgressIndicator()),
-                    errorWidget: (context, url, error) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        provider.setImageLoadSuccess(false);
-                      });
-                      return const Icon(
-                        Icons.broken_image,
-                        size: 100,
-                        color: Colors.grey,
-                      );
-                    },
-                  )
-                  : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(
-                        Icons.image_not_supported,
-                        size: 100,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        "사용할 수 있는 이미지가 없습니다",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-        ),
-        if (alreadyUsed)
-          const Positioned(
-            right: 10,
-            top: 10,
-            child: Icon(Icons.check_circle, color: Colors.green, size: 30),
+          child: IconButton(
+            onPressed: provider.loadNextImage,
+            icon: const Icon(Icons.refresh, size: 28),
+            tooltip: "다른 그림 보기",
           ),
+        ),
+
+        const SizedBox(height: 8), // 새로고침 버튼 아래 간격도 줄임
+
+        // 🎯 유형 선택 드롭다운 (이미지 폭과 맞춤)
+        SizedBox(
+          width: 380,
+          child: DropdownButtonFormField<String>(
+            value: selectedCategory,
+            decoration: const InputDecoration(
+              labelText: "유형",
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            ),
+            items: categories.map((category) {
+              return DropdownMenuItem<String>(
+                value: category,
+                child: Text(category, style: const TextStyle(fontSize: 14)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                provider.setSelectedCategory(value);
+              }
+            },
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // 📝 작문 & 리딩 버튼 한 줄 정렬, 폭 맞춤
+        if (provider.imageLoadSuccess)
+          SizedBox(
+            width: 380,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (provider.selectedImage != null) {
+                      NavigationHelpers.goToWritingScreen(
+                        context,
+                        provider.selectedImage!,
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text("작문하러 가기"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    if (provider.selectedImage != null) {
+                      NavigationHelpers.goToReadingScreen(
+                        context,
+                        imagePath: provider.selectedImage!.path ?? '',
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.record_voice_over),
+                  label: const Text("리딩하러 가기"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.indigo,
+                    side: const BorderSide(color: Colors.indigo),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _buildActionButtons(image, PictureProvider provider) {
-    if (image == null || provider.images.isEmpty) {
-      return IconButton(
-        icon: Icon(Icons.refresh, size: 40, color: Colors.orange),
-        onPressed: provider.fetchImages,
-        tooltip: "새로고침",
-      );
-    } else {
-      return Column(
-        children: [
-          ElevatedButton.icon(
-            onPressed: provider.loadRandomImage,
-            icon: Icon(Icons.refresh),
-            label: Text("다른 그림 보기"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orangeAccent,
-            ),
-          ),
-          SizedBox(height: 10),
-          if (provider.imageLoadSuccess)
-            ElevatedButton(
-              onPressed: () {
-                if (provider.selectedImage != null &&
-                    provider.imageLoadSuccess) {
-                  NavigationHelpers.goToWritingScreen(
-                    context,
-                    provider.selectedImage!,
-                  );
-                }
-              },
-              child: Text("작문하러 가기"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-              ),
-            ),
-        ],
-      );
-    }
-  }
+
 }

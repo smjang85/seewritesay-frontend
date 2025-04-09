@@ -16,4 +16,14 @@ class ImageApiService {
       throw Exception('이미지 목록 불러오기 실패');
     }
   }
+
+  static Future<List<String>> fetchCategories() async {
+    final response = await http.get(Uri.parse(ApiConstants.imagesCategoriesUrl));
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => e.toString()).toList();
+    } else {
+      throw Exception('Failed to load categories');
+    }
+  }
 }

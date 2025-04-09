@@ -1,29 +1,27 @@
-import 'package:flutter/material.dart';
-
 class ImageModel {
   final int id;
   final String name;
-  final String? path;
-  final String? category;
-  final String description;
+  final String path;
+  final String? category; // 서버로부터 받은 필드
+  final String? description;
+
+  String? get categoryName => category;
 
   ImageModel({
     required this.id,
     required this.name,
-    this.path,
+    required this.path,
     this.category,
-    required this.description,
+    this.description,
   });
 
   factory ImageModel.fromJson(Map<String, dynamic> json) {
-    debugPrint("🧾 받은 JSON: $json"); // 디버깅용
-
     return ImageModel(
       id: json['id'],
-      name: json['name'] ?? 'unknown',
+      name: json['name'],
       path: json['path'],
       category: json['category'],
-      description: json['description'] ?? '',
+      description: json['description'],
     );
   }
 }

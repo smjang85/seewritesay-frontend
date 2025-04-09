@@ -1,115 +1,121 @@
-// ✅ 리딩 Provider 정의
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:string_similarity/string_similarity.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class ReadingProvider extends ChangeNotifier {
-  final FlutterTts _tts = FlutterTts();
-  final stt.SpeechToText _speech = stt.SpeechToText();
-
   String sentence = '';
-  bool isListening = false;
+  String imagePath = '';
   String recognizedText = '';
-  double accuracy = 0.0;
   String feedback = '';
+  double accuracy = 0.0;
+  bool isListening = false;
   bool showResult = false;
 
-  Future<void> initialize(String sentenceText) async {
-    sentence = sentenceText;
-    await _tts.setLanguage("en-US");
+  final FlutterTts _flutterTts = FlutterTts();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+
+  String recordedFilePath = '';
+  Duration position = Duration.zero;
+  Duration duration = Duration.zero;
+
+  StreamSubscription? _playerSubscription;
+
+  bool _isPlaying = false;
+  bool get isPlaying => _isPlaying;
+
+  void initialize(String sentence, {String? imagePath}) async {
+    this.sentence = sentence;
+    this.imagePath = imagePath ?? '';
+    await _recorder.openRecorder();
+    await _player.openPlayer();
+    notifyListeners();
   }
 
   Future<void> speak() async {
-    await _tts.speak(sentence);
+    await _flutterTts.speak(sentence);
   }
 
   Future<void> startListening() async {
-    if (isListening) {
-      await _speech.stop();
-      isListening = false;
-      notifyListeners();
-      return;
-    }
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) return;
 
     isListening = true;
-    recognizedText = '';
-    accuracy = 0.0;
-    feedback = '';
     showResult = false;
+    recognizedText = '';
+    feedback = '';
+    accuracy = 0.0;
     notifyListeners();
 
-    final available = await _speech.initialize(
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          isListening = false;
-          notifyListeners();
-        }
-      },
-      onError: (error) {
-        isListening = false;
-        notifyListeners();
-      },
-    );
+    final dir = await getApplicationDocumentsDirectory();
+    recordedFilePath = '${dir.path}/recording.aac';
+    await _recorder.startRecorder(toFile: recordedFilePath);
 
-    if (!available) {
-      isListening = false;
+    await _speech.listen(onResult: (result) {
+      recognizedText = result.recognizedWords;
       notifyListeners();
-      return;
-    }
-
-    _speech.listen(
-      localeId: 'en_US',
-      listenFor: Duration(seconds: 6),
-      pauseFor: Duration(seconds: 2),
-      onResult: (result) {
-        if (!result.finalResult) return;
-        final spoken = result.recognizedWords;
-        final score = _calculateAccuracy(sentence, spoken);
-        recognizedText = spoken;
-        accuracy = score;
-        feedback = _generateFeedback(score);
-        showResult = true;
-        isListening = false;
-        notifyListeners();
-      },
-    );
+    });
   }
 
-  double _calculateAccuracy(String original, String spoken) {
-    final originalWords = original.toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '').split(RegExp(r'\s+'));
-    final spokenWords = spoken.toLowerCase().replaceAll(RegExp(r'[^a-z0-9 ]'), '').split(RegExp(r'\s+'));
+  Future<void> stopListening() async {
+    await _speech.stop();
+    await _recorder.stopRecorder();
 
-    if (originalWords.isEmpty || spokenWords.isEmpty) return 0.0;
-
-    int matchCount = 0;
-    for (final word in originalWords) {
-      for (final spokenWord in spokenWords) {
-        if (word.similarityTo(spokenWord) > 0.8) {
-          matchCount++;
-          break;
-        }
-      }
-    }
-    return matchCount / originalWords.length;
-  }
-
-  String _generateFeedback(double score) {
-    if (score >= 0.95) return "✅ 완벽해요! 멋져요!";
-    if (score >= 0.7) return "👌 거의 정확해요. 몇 단어만 더 연습해봐요.";
-    return "🧐 다시 연습해보세요. 조금 더 정확하게!";
-  }
-
-  void reset() {
-    recognizedText = '';
-    accuracy = 0.0;
-    feedback = '';
-    showResult = false;
+    isListening = false;
+    _calculateAccuracy();
+    showResult = true;
     notifyListeners();
   }
 
-  void disposeTTS() {
-    _tts.stop();
-    _speech.stop();
+  void _calculateAccuracy() {
+    accuracy = sentence.similarityTo(recognizedText);
+    if (accuracy > 0.8) {
+      feedback = '잘 읽었어요!';
+    } else if (accuracy > 0.5) {
+      feedback = '조금 더 정확히 읽어보세요.';
+    } else {
+      feedback = '다시 한 번 도전해볼까요?';
+    }
+  }
+
+  Future<void> playRecording() async {
+    if (recordedFilePath.isEmpty) return;
+
+    await _player.startPlayer(
+      fromURI: recordedFilePath,
+      whenFinished: () {
+        position = Duration.zero;
+        notifyListeners();
+      },
+    );
+
+    _playerSubscription = _player.onProgress!.listen((event) {
+      position = event.position;
+      duration = event.duration;
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _recorder.closeRecorder();
+    _player.closePlayer();
+    _playerSubscription?.cancel();
+    super.dispose();
+  }
+
+  void disposeResources() {
+    _flutterTts.stop();
+    _speech.cancel();
+    _recorder.stopRecorder();
+    _player.stopPlayer();
+    _playerSubscription?.cancel();
   }
 }

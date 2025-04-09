@@ -71,13 +71,15 @@ class WritingProvider extends ChangeNotifier {
     if (userText.isEmpty || userText.length > maxLength) return;
 
     if (remainingFeedback <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ 피드백 횟수를 모두 사용했어요.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("⚠️ 피드백 횟수를 모두 사용했어요.")));
       return;
     }
 
-    final shouldSave = await WritingLogicService.confirmOverwriteDialog(context);
+    final shouldSave = await WritingLogicService.confirmOverwriteDialog(
+      context,
+    );
     if (shouldSave) {
       await WritingLogicService.saveHistory(userText, imageModel?.id ?? 0);
     }
@@ -102,9 +104,9 @@ class WritingProvider extends ChangeNotifier {
       remainingFeedback--;
     } catch (e) {
       debugPrint("❌ GPT 오류 발생: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("AI 피드백 요청에 실패했어요.")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("AI 피드백 요청에 실패했어요.")));
     } finally {
       isLoading = false;
       notifyListeners();
@@ -125,7 +127,7 @@ class WritingProvider extends ChangeNotifier {
   }
 
   Future<void> openHistory(BuildContext context) async {
-    final result = await NavigationHelpers.openWritingHistoryAndReturn(
+    final result = await NavigationHelpers.openHistoryWritingAndReturn(
       context,
       imageId: imageModel?.id,
     );
@@ -136,11 +138,18 @@ class WritingProvider extends ChangeNotifier {
     }
   }
 
+// WritingProvider.dart 안에
   void goToReading(BuildContext context) {
-    final sentence = cleanedCorrection.isNotEmpty
-        ? cleanedCorrection
-        : textController.text.trim();
-    NavigationHelpers.goToReadingScreen(context, sentence);
+    final image = imageModel;
+    if (image == null) return;
+
+    final currentSentence = textController.text.trim();
+    debugPrint("goToReading currentSentence $currentSentence");
+    NavigationHelpers.goToReadingScreen(
+      context,
+      sentence: currentSentence,
+      imagePath: ''
+    );
   }
 
   void resetFeedback() {

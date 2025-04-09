@@ -21,16 +21,14 @@ class AppDrawerMenu extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.edit_note),
             title: Text("진행한 작문"),
-            onTap: () => NavigationHelpers.goToWritingHistoryScreen(context),
+            onTap: () {
+              Navigator.pop(context);
+              NavigationHelpers.goToHistoryWritingScreen(context, withCategory: true);
+            },
           ),
           ListTile(
             leading: Icon(Icons.record_voice_over),
             title: Text("녹음한 리딩"),
-            onTap: () {}, // TODO: 연결 예정
-          ),
-          ListTile(
-            leading: Icon(Icons.category),
-            title: Text("유형 선택 (랜덤 / 학교 / 여행)"),
             onTap: () {}, // TODO: 연결 예정
           ),
           const Divider(),

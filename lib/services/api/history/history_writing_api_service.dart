@@ -1,15 +1,17 @@
+import 'package:SeeWriteSay/models/history_writing_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 
-class WritingHistoryApiService {
+class HistoryWritingApiService {
   /// 히스토리 목록 불러오기
   static Future<List<Map<String, dynamic>>> fetchHistory({int? imageId}) async {
+    debugPrint("fetchHistory imageId : $imageId");
     final token = await CommonLogicService.getToken();
 
-    final uri = Uri.parse(ApiConstants.writingHistoryUrl).replace(
+    final uri = Uri.parse(ApiConstants.historyWritingUrl).replace(
       queryParameters: imageId != null ? {'imageId': imageId.toString()} : null,
     );
 
@@ -24,6 +26,32 @@ class WritingHistoryApiService {
       return list.map((e) => e as Map<String, dynamic>).toList();
     } else {
       throw Exception('❌ 히스토리 불러오기 실패: ${res.statusCode}');
+    }
+  }
+
+  static Future<List<HistoryWritingModel>> fetchHistoryWithCategory() async {
+    final token = await CommonLogicService.getToken(); // ✅ 토큰 추가
+    final url = ApiConstants.historyWritingWithCategoryUrl;
+
+    debugPrint('📡 호출 URL (withCategory): $url');
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      debugPrint("fetchHistoryWithCategory 응답 바디: ${response.body}");
+
+      final List<dynamic> jsonList = jsonDecode(response.body);
+      return jsonList.map((json) => HistoryWritingModel.fromJson(json)).toList();
+    } else {
+      debugPrint("❌ 응답 코드: ${response.statusCode}");
+      debugPrint("❌ 응답 바디: ${response.body}");
+      throw Exception('히스토리 불러오기 실패');
     }
   }
 
@@ -44,7 +72,7 @@ class WritingHistoryApiService {
 
 
     final res = await http.post(
-      Uri.parse(ApiConstants.writingHistoryUrl),
+      Uri.parse(ApiConstants.historyWritingUrl),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',

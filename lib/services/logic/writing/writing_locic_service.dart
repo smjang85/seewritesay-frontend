@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
-import 'package:SeeWriteSay/services/api/writing/writing_history_api_service.dart';
+import 'package:SeeWriteSay/services/api/history/history_writing_api_service.dart';
 
 class WritingLogicService {
   static Future<void> saveHistory(String sentence, int imageId) async {
     try {
-      await WritingHistoryApiService.saveHistory(
+      await HistoryWritingApiService.saveHistory(
         imageId: imageId,
         sentence: sentence,
       );
@@ -17,7 +17,7 @@ class WritingLogicService {
   static Future<bool> hasHistory({int? imageId}) async {
     debugPrint('hasHistory imageId : $imageId');
     try {
-      final list = await WritingHistoryApiService.fetchHistory(imageId: imageId);
+      final list = await HistoryWritingApiService.fetchHistory(imageId: imageId);
       return list.isNotEmpty;
     } catch (e) {
       debugPrint("❌ 서버 히스토리 확인 실패: $e");

@@ -1,3 +1,4 @@
+import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -48,15 +49,10 @@ class WritingScreenContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (provider.imageModel != null) ...[
-                  Center(
-                    child: CachedNetworkImage(
-                      imageUrl: '${ApiConstants.baseUrl}${provider.imageModel!.path}',
-                      height: 200,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const CircularProgressIndicator(),
-                      errorWidget: (context, url, error) =>
-                      const Icon(Icons.broken_image, size: 100),
-                    ),
+                  CommonImageViewer(
+                    imagePath: provider.imageModel!.path,
+                    height: 200,          // 기존과 동일하게 200으로 유지
+                    borderRadius: 16,     // 부드러운 라운드 처리
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -129,6 +125,10 @@ class WritingScreenContent extends StatelessWidget {
                       OutlinedButton.icon(
                         icon: const Icon(Icons.edit_note),
                         label: const Text("피드백 반영"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.indigo,
+                          side: const BorderSide(color: Colors.indigo),
+                        ),
                         onPressed: provider.applyCorrection,
                       ),
                       ElevatedButton(
@@ -153,6 +153,10 @@ class WritingScreenContent extends StatelessWidget {
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.auto_fix_high),
                   label: const Text("AI 피드백 받기"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: provider.isLoading
                       ? null
                       : () => provider.getAIFeedback(context),
