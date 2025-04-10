@@ -21,11 +21,13 @@ class AiFeedbackApiService {
     if (response.statusCode == 401) throw Exception("🔒 로그인 필요: 토큰이 없거나 만료됨");
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(response.bodyBytes)); // ✅ 인코딩 문제 방지
-      debugPrint("fetchAIFeedback data : ${data}");
+      final Map<String, dynamic> json = jsonDecode(response.body);
+      final data = json['data'];
+      debugPrint("fetchAIFeedback data : $data");
       return {
         'correction': data['correction'] ?? sentence,
         'feedback': data['feedback'] ?? '',
+        'grade': data['grade'] ?? 'F'
       };
     } else {
       throw Exception(response.body);

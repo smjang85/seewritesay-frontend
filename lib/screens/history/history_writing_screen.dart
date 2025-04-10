@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:SeeWriteSay/providers/history/history_writing_provider.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
+import 'package:provider/provider.dart';
 
 class HistoryWritingScreen extends StatelessWidget {
   final int? imageId;
@@ -37,13 +37,25 @@ class HistoryWritingContent extends StatelessWidget {
     final provider = context.watch<HistoryWritingProvider>();
     final historyList = provider.history;
 
-
     debugPrint('📦 드롭다운 category 목록: ${provider.history.map((e) => e.categoryName).toSet().toList()}');
     debugPrint('📦 history.length: ${provider.history.length}');
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("✍️ 작문 히스토리"),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.edit_note,
+            ),
+            const SizedBox(width: 8), // 아이콘과 텍스트 사이 간격
+            const Text(
+              "진행한 작문",
+              style: TextStyle(
+                fontSize: 20, // 텍스트 크기 맞추기
+              ),
+            ),
+          ],
+        ),
         bottom: provider.categories.length > 1 && provider.imageId == null
             ? PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -68,9 +80,8 @@ class HistoryWritingContent extends StatelessWidget {
         )
             : null, // ✅ 드롭다운 숨기기
       ),
-
       body: historyList.isEmpty
-          ? const Center(child: Text("저장된 작문이 없어요."))
+          ? const Center(child: CircularProgressIndicator()) // 로딩 중일 때 표시
           : ListView.separated(
         itemCount: historyList.length,
         separatorBuilder: (_, __) => const Divider(height: 1),
@@ -112,13 +123,16 @@ class HistoryWritingContent extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Text(
                       shortDesc,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textScaleFactor: 1.0,
                     ),
                   ),
                 Padding(
                   padding: const EdgeInsets.only(top: 2.0),
                   child: Text(
-                    CommonLogicService.formatDateTime(entry.createdAt?.toString() ?? ''),
+                    CommonLogicService.formatReadableTime(entry.createdAt?.toString() ?? ''),
                     style: const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                 ),

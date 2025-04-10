@@ -1,6 +1,7 @@
 import 'package:SeeWriteSay/providers/login/login_provider.dart';
 import 'package:SeeWriteSay/providers/picture/picture_provider.dart';
 import 'package:SeeWriteSay/providers/reading/reading_provider.dart';
+import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
 import 'package:SeeWriteSay/providers/history/history_writing_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -25,10 +26,12 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ImageListProvider()),
         ChangeNotifierProvider(create: (_) => LoginProvider()),
         ChangeNotifierProvider(create: (_) => PictureProvider()),
         ChangeNotifierProvider(create: (_) => ReadingProvider()),
         ChangeNotifierProvider(create: (_) => HistoryWritingProvider()),
+
       ],
       child: const SeeWriteSayApp(),
     ),

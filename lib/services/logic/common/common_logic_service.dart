@@ -36,17 +36,6 @@ class CommonLogicService {
     return jsonEncode(data);
   }
 
-  static String formatDateTime(String raw) {
-    try {
-      final dt = DateTime.parse(raw);
-      return "${dt.year}-${_twoDigits(dt.month)}-${_twoDigits(dt.day)} "
-          "${_twoDigits(dt.hour)}:${_twoDigits(dt.minute)}:${_twoDigits(dt.second)}";
-    } catch (_) {
-      return raw;
-    }
-  }
-
-  static String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
   static void dismissKeyboard(BuildContext context) {
     FocusScope.of(context).unfocus();
@@ -150,4 +139,51 @@ class CommonLogicService {
       ),
     );
   }
+
+  static Future<void> showConfirmAndNavigate({
+    required BuildContext context,
+    required String title,
+    required String content,
+    required VoidCallback onConfirm,
+  }) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("아니요"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              onConfirm(); // 확인 시 콜백 실행
+            },
+            child: const Text("네"),
+          ),
+        ],
+      ),
+    );
+  }
+  static String formatReadableTime(String fileName) {
+    try {
+      final parts = fileName.trim().split('_');
+      if (parts.length < 3) return fileName;
+
+      final date = parts[2]; // 20250410
+      final time = parts[3]; // 151231
+
+      final formatted = '${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)} '
+          '${time.substring(0, 2)}:${time.substring(2, 4)}:${time.substring(4, 6)}';
+
+      return formatted;
+    } catch (e) {
+      debugPrint('📛 수동 포맷 실패: $e');
+      return fileName;
+    }
+  }
+
+
 }

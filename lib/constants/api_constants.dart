@@ -15,4 +15,5 @@ class ApiConstants {
 
   static String get historyWritingUrl => '$baseUrl/api/v1/history/writing';
   static String get historyWritingWithCategoryUrl => '$baseUrl/api/v1/history/writing/with-category';
+  static String get historyWritingDeleteUrl => '$baseUrl/api/v1/history/writing';
 }

@@ -18,6 +18,7 @@ class WritingProvider extends ChangeNotifier {
 
   String correctedText = '';
   String feedback = '';
+  String grade = '';
 
   bool feedbackShown = false;
   bool isLoading = false;
@@ -37,10 +38,12 @@ class WritingProvider extends ChangeNotifier {
 
   Future<void> initialize() async {
     debugPrint("initialSentence : $initialSentence");
+    isTextEditable = true;
     if (initialSentence != null) {
       textController.text = initialSentence!;
-      notifyListeners();
     }
+
+    notifyListeners();
 
     await _loadFeedbackLimit();
     textController.addListener(_onInputChanged);
@@ -100,6 +103,7 @@ class WritingProvider extends ChangeNotifier {
 
       correctedText = result['correction'] ?? '';
       feedback = result['feedback'] ?? '';
+      grade = result['grade'] ?? '';
       feedbackShown = true;
       hasReceivedFeedback = true;
       remainingFeedback--;
@@ -116,6 +120,7 @@ class WritingProvider extends ChangeNotifier {
   void _resetFeedback() {
     correctedText = '';
     feedback = '';
+    grade = '';
     feedbackShown = false;
     hasReceivedFeedback = false;
     notifyListeners();
@@ -148,15 +153,63 @@ class WritingProvider extends ChangeNotifier {
     NavigationHelpers.goToReadingScreen(
       context,
       sentence: currentSentence,
-      imagePath: ''
+      imageModel: imageModel!
     );
   }
 
   void resetFeedback() {
+    isTextEditable = true;
     correctedText = '';
     feedback = '';
     feedbackShown = false;
     hasReceivedFeedback = false;
     notifyListeners();
+  }
+
+
+  bool isTextEditable = true; // 추가
+
+  void applyCorrectionWithDialog(BuildContext context) {
+    // ✅ 등급이 F가 아니고, 수정문장이 없는 경우 -> 현재 문장 그대로 리딩
+    if (grade != 'F' && cleanedCorrection.isEmpty) {
+      isTextEditable = false;
+      notifyListeners();
+
+      CommonLogicService.showConfirmAndNavigate(
+        context: context,
+        title: "리딩 연습",
+        content: "리딩 연습하기로 넘어가겠습니까?",
+        onConfirm: () => goToReading(context),
+      );
+      return;
+    }
+
+    // 일반적인 피드백 반영 흐름
+    textController.text = cleanedCorrection;
+    isTextEditable = false; // 인풋 비활성화
+    notifyListeners();
+
+    CommonLogicService.showConfirmAndNavigate(
+      context: context,
+      title: "리딩 연습",
+      content: "리딩 연습하기로 넘어가겠습니까?",
+      onConfirm: () => goToReading(context),
+    );
+  }
+
+
+  Color gradeColor(String grade) {
+    if (grade == "A+" || grade == "A" || grade == "A-") return Colors.green;
+    if (grade.startsWith("B")) return Colors.teal;
+    if (grade.startsWith("C")) return Colors.orange;
+    if (grade == "D") return Colors.redAccent;
+    return Colors.red;
+  }
+
+  @override
+  void dispose() {
+    textController.dispose();
+    scrollController.dispose();
+    super.dispose();
   }
 }

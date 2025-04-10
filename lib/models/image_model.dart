@@ -2,7 +2,7 @@ class ImageModel {
   final int id;
   final String name;
   final String path;
-  final String? category; // 서버로부터 받은 필드
+  final String? category; // 서버의 categoryName 매핑
   final String? description;
 
   String? get categoryName => category;
@@ -20,7 +20,7 @@ class ImageModel {
       id: json['id'],
       name: json['name'],
       path: json['path'],
-      category: json['category'],
+      category: json['categoryName'], // ✅ 여기 수정!
       description: json['description'],
     );
   }

@@ -29,7 +29,10 @@ class AppDrawerMenu extends StatelessWidget {
           ListTile(
             leading: Icon(Icons.record_voice_over),
             title: Text("녹음한 리딩"),
-            onTap: () {}, // TODO: 연결 예정
+            onTap: () {
+              Navigator.pop(context);
+              NavigationHelpers.goToHistoryReadingScreen(context);
+            },
           ),
           const Divider(),
           isLoggedIn

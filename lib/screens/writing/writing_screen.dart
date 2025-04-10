@@ -1,8 +1,7 @@
+import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/providers/writing/writing_provider.dart';
 
@@ -15,7 +14,10 @@ class WritingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-        create: (_) => WritingProvider(imageModel, initialSentence: initialSentence)..initialize(),
+      create:
+          (_) =>
+              WritingProvider(imageModel, initialSentence: initialSentence)
+                ..initialize(),
 
       child: const WritingScreenContent(),
     );
@@ -30,9 +32,18 @@ class WritingScreenContent extends StatelessWidget {
     final provider = context.watch<WritingProvider>();
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
+    final isWellWritten =
+        provider.cleanedCorrection == provider.textController.text.trim();
+
     return Scaffold(
       appBar: AppBar(
         title: Text("작문 연습 (${provider.feedbackRemainingText})"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            NavigationHelpers.goToPictureScreen(context);
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -51,8 +62,8 @@ class WritingScreenContent extends StatelessWidget {
                 if (provider.imageModel != null) ...[
                   CommonImageViewer(
                     imagePath: provider.imageModel!.path,
-                    height: 200,          // 기존과 동일하게 200으로 유지
-                    borderRadius: 16,     // 부드러운 라운드 처리
+                    height: 200,
+                    borderRadius: 16,
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -60,6 +71,8 @@ class WritingScreenContent extends StatelessWidget {
                   controller: provider.textController,
                   maxLength: provider.maxLength,
                   maxLines: 5,
+                  enabled: provider.isTextEditable,
+                  // ✅ 비활성화 제어
                   decoration: const InputDecoration(
                     hintText: "이 장면에 대해 영어로 이야기해보세요.",
                     border: OutlineInputBorder(),
@@ -88,13 +101,31 @@ class WritingScreenContent extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (provider.cleanedCorrection ==
-                            provider.textController.text.trim()) ...[
-                          const Text(
-                            "🎉 잘 작문했어요!",
-                            style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold),
+                        if (isWellWritten) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.emoji_emotions, color: Colors.green),
+                                SizedBox(width: 8),
+                                Text(
+                                  "참 잘했어요!",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 12),
                         ] else ...[
@@ -114,26 +145,62 @@ class WritingScreenContent extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(provider.feedback),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Text(
+                                "📊 등급: ",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                provider.grade,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: provider.gradeColor(provider.grade),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment:
+                        isWellWritten
+                            ? MainAxisAlignment.center
+                            : MainAxisAlignment.spaceEvenly,
                     children: [
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.edit_note),
-                        label: const Text("피드백 반영"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.indigo,
-                          side: const BorderSide(color: Colors.indigo),
-                        ),
-                        onPressed: provider.applyCorrection,
-                      ),
+                      if (!isWellWritten)
+                        provider.grade == "F"
+                            ? OutlinedButton.icon(
+                              icon: const Icon(Icons.refresh),
+                              label: const Text("다시 작성하기"),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                              ),
+                              onPressed: provider.resetFeedback,
+                            )
+                            : OutlinedButton.icon(
+                              icon: const Icon(Icons.edit_note),
+                              label: const Text("피드백 반영"),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.indigo,
+                                side: const BorderSide(color: Colors.indigo),
+                              ),
+                              onPressed:
+                                  () => provider.applyCorrectionWithDialog(
+                                    context,
+                                  ),
+                            ),
                       ElevatedButton(
                         child: const Text("리딩 연습하기"),
-                        onPressed: () => provider.goToReading(context),
+                        onPressed:
+                            provider.grade == "F"
+                                ? null
+                                : () => provider.goToReading(context),
                       ),
                     ],
                   ),
@@ -148,8 +215,10 @@ class WritingScreenContent extends StatelessWidget {
               right: 0,
               child: Container(
                 alignment: Alignment.center,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.auto_fix_high),
                   label: const Text("AI 피드백 받기"),
@@ -157,9 +226,10 @@ class WritingScreenContent extends StatelessWidget {
                     backgroundColor: Colors.indigo,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: provider.isLoading
-                      ? null
-                      : () => provider.getAIFeedback(context),
+                  onPressed:
+                      provider.isLoading
+                          ? null
+                          : () => provider.getAIFeedback(context),
                 ),
               ),
             ),
@@ -173,8 +243,5 @@ class WritingScreenArgs {
   final ImageModel image;
   final String? sentence;
 
-  WritingScreenArgs({
-    required this.image,
-    this.sentence,
-  });
+  WritingScreenArgs({required this.image, this.sentence});
 }

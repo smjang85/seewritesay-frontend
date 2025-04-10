@@ -1,3 +1,4 @@
+import 'package:SeeWriteSay/screens/history/history_reading_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,13 +51,14 @@ final GoRouter appRouter = GoRouter(
       name: 'reading',
       path: '/reading',
       pageBuilder: (context, state) {
-        final sentence = state.uri.queryParameters['text'];
-        final imagePath = state.uri.queryParameters['imagePath'];
+        final extra = state.extra as Map<String, dynamic>?;
+        final sentence = extra?['sentence'] as String?;
+        final imageModel = extra?['imageModel'] as ImageModel?;
 
         return MaterialPage(
           child: ReadingScreen(
             sentence: sentence,
-            imagePath: imagePath,
+            imageModel: imageModel,
           ),
         );
       },
@@ -74,6 +76,11 @@ final GoRouter appRouter = GoRouter(
           imageId: imageId,
         );
       },
+    ),
+    GoRoute(
+      path: '/historyReading',
+      name: 'historyReading',
+      builder: (context, state) => HistoryReadingScreen(),
     ),
     GoRoute(
       path: '/googleAuth/callback',

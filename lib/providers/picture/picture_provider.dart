@@ -29,10 +29,18 @@ class PictureProvider extends ChangeNotifier {
       _extractCategories();
       loadNextImage();
       notifyListeners();
+
+      //final imageListProvider = Provider.of<ImageListProvider>(context, listen: false);
+      //imageListProvider.setImages(_images);
+
     } catch (e) {
       debugPrint("❌ 이미지 불러오기 실패: $e");
     }
   }
+
+
+
+
 
   Future<void> loadUsedImages() async {
     final used = await PictureLogicService.loadUsedImagePaths();
@@ -100,7 +108,11 @@ class PictureProvider extends ChangeNotifier {
 
   void _extractCategories() {
     final categorySet = {'전체'};
+
     for (var image in _images) {
+      debugPrint("_extractCategories image categoryName: ${image.categoryName}");
+      debugPrint("_extractCategories image description: ${image.description}");
+
       if (image.categoryName != null && image.categoryName!.isNotEmpty) {
         categorySet.add(image.categoryName!);
       }

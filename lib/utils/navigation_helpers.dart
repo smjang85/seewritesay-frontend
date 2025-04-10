@@ -8,7 +8,7 @@ class NavigationHelpers {
       ImageModel image, {
         String? sentence,
       }) {
-    context.pushNamed(
+    context.pushNamed( // ✅ pushNamed → goNamed
       'writing',
       queryParameters: {
         'imageId': image.id.toString(),
@@ -19,7 +19,6 @@ class NavigationHelpers {
       },
     );
   }
-
   static void goToHistoryWritingScreen(BuildContext context, {bool withCategory = false}) {
     final uri = Uri(path: '/historyWriting', queryParameters: {
       'initialWithCategory': withCategory.toString(),
@@ -53,15 +52,15 @@ class NavigationHelpers {
   static void goToReadingScreen(
       BuildContext context, {
         String? sentence,
-        String? imagePath,
+        required ImageModel imageModel,
       }) {
+    debugPrint("goToReadingScreen - imageModel : $imageModel , sentence : $sentence");
 
-    debugPrint("goToReadingScreen - imagePath : $imagePath , sentence : $sentence");
-    context.pushNamed(
+    context.goNamed( // ✅ pushNamed → goNamed
       'reading',
-      queryParameters: {
-        if (sentence != null) 'text': sentence.trim(),
-        if (imagePath != null) 'imagePath': imagePath,
+      extra: {
+        'sentence': sentence?.trim(),
+        'imageModel': imageModel,
       },
     );
   }
@@ -71,5 +70,9 @@ class NavigationHelpers {
 
   static void popWithResult(BuildContext context, Map<String, dynamic> result) {
     context.pop(result);
+  }
+
+  static void goToHistoryReadingScreen(BuildContext context) {
+    GoRouter.of(context).go('/historyReading');
   }
 }

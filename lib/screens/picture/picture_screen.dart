@@ -1,3 +1,4 @@
+import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -15,9 +16,17 @@ class _PictureScreenState extends State<PictureScreen> {
   @override
   void initState() {
     super.initState();
-    final provider = context.read<PictureProvider>();
-    provider.loadUsedImages();
-    provider.fetchImages();
+
+    // 비동기 초기화 로직을 별도 함수로 분리
+    Future.microtask(() async {
+      final provider = Provider.of<PictureProvider>(context, listen: false);
+      final imageListProvider = Provider.of<ImageListProvider>(context, listen: false);
+
+      await provider.fetchImages();
+      imageListProvider.setImages(provider.images);
+
+      await provider.loadUsedImages();
+    });
   }
 
   @override
@@ -135,7 +144,7 @@ class _PictureScreenState extends State<PictureScreen> {
                     if (provider.selectedImage != null) {
                       NavigationHelpers.goToReadingScreen(
                         context,
-                        imagePath: provider.selectedImage!.path ?? '',
+                        imageModel: provider.selectedImage!,
                       );
                     }
                   },

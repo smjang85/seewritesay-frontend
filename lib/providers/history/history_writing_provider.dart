@@ -74,13 +74,15 @@ class HistoryWritingProvider extends ChangeNotifier {
     try {
       final loaded = await HistoryWritingApiService.fetchHistory(imageId: imageId);
 
+      debugPrint("HistoryWritingProvider loaded : $loaded");
+
       _filteredHistory = loaded
           .map((e) => HistoryWritingModel.fromJson(e))
           .toList()
         ..sort((a, b) =>
             (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
 
-      debugPrint("HistoryWritingProvider loaded : $_filteredHistory");
+
     } catch (e) {
       debugPrint("❌ 서버 히스토리 불러오기 실패: $e");
       _filteredHistory = [];
@@ -102,8 +104,17 @@ class HistoryWritingProvider extends ChangeNotifier {
     }
   }
 
-  /// (추후 구현용) 히스토리 삭제
   Future<void> deleteHistoryItem(int index) async {
-    debugPrint("❌ 서버 기반에서는 삭제 기능이 아직 미구현 상태예요.");
+    if (index < 0 || index >= _filteredHistory.length) return;
+
+    final id = _filteredHistory[index].id;
+    try {
+      await HistoryWritingApiService.deleteHistoryById(id);
+      _filteredHistory.removeAt(index);
+      _allHistory.removeWhere((e) => e.id == id);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ 삭제 실패: $e');
+    }
   }
 }

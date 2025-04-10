@@ -16,18 +16,22 @@ class HistoryWritingApiService {
     );
 
     debugPrint('📡 호출 URI: $uri');
-    final res = await http.get(uri, headers: {
+    final response = await http.get(uri, headers: {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     });
 
-    if (res.statusCode == 200) {
-      final List<dynamic> list = json.decode(res.body);
-      return list.map((e) => e as Map<String, dynamic>).toList();
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> json = jsonDecode(response.body);
+      debugPrint("✅ json: $json");
+
+      final List<dynamic> dataList = json['data'] ?? [];
+      return dataList.map((e) => e as Map<String, dynamic>).toList();
     } else {
-      throw Exception('❌ 히스토리 불러오기 실패: ${res.statusCode}');
+      throw Exception('❌ 히스토리 불러오기 실패: ${response.statusCode}');
     }
   }
+
 
   static Future<List<HistoryWritingModel>> fetchHistoryWithCategory() async {
     final token = await CommonLogicService.getToken(); // ✅ 토큰 추가
@@ -46,8 +50,10 @@ class HistoryWritingApiService {
     if (response.statusCode == 200) {
       debugPrint("fetchHistoryWithCategory 응답 바디: ${response.body}");
 
-      final List<dynamic> jsonList = jsonDecode(response.body);
-      return jsonList.map((json) => HistoryWritingModel.fromJson(json)).toList();
+      final Map<String, dynamic> json = jsonDecode(response.body);
+      final List<dynamic> data = json['data']; // 'data' 키 안의 리스트 추출
+
+      return data.map((json) => HistoryWritingModel.fromJson(json)).toList();
     } else {
       debugPrint("❌ 응답 코드: ${response.statusCode}");
       debugPrint("❌ 응답 바디: ${response.body}");
@@ -80,8 +86,22 @@ class HistoryWritingApiService {
       body: body,
     );
 
-    if (res.statusCode != 200) {
+    if (res.statusCode != 204) {
       throw Exception('❌ 히스토리 저장 실패: ${res.statusCode}');
+    }
+  }
+
+  static Future<void> deleteHistoryById(int id) async {
+    final token = await CommonLogicService.getToken();
+    final uri = Uri.parse(ApiConstants.historyWritingDeleteUrl).replace(queryParameters: {'id': '$id'});
+
+    final res = await http.delete(uri, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+
+    if (res.statusCode != 204) {
+      throw Exception('❌ 히스토리 삭제 실패: ${res.statusCode}');
     }
   }
 }
