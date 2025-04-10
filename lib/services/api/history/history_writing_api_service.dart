@@ -85,7 +85,7 @@ class HistoryWritingApiService {
       },
       body: body,
     );
-
+    debugPrint("saveHistory :${res.statusCode}");
     if (res.statusCode != 204) {
       throw Exception('❌ 히스토리 저장 실패: ${res.statusCode}');
     }

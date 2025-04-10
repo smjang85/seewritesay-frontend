@@ -6,132 +6,112 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
-
-class HistoryReadingScreen extends StatelessWidget {
+class HistoryReadingScreen extends StatefulWidget {
   const HistoryReadingScreen({super.key});
 
   @override
+  State<HistoryReadingScreen> createState() => _HistoryReadingScreenState();
+}
+
+class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
+  late HistoryReadingProvider _provider;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = HistoryReadingProvider();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final imageListProvider = context.read<ImageListProvider>();
+    await _provider.initializeHistoryView(imageListProvider.images);
+    setState(() {
+      _isInitialized = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _provider.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer<ImageListProvider>(
-      builder: (context, imageListProvider, _) {
-        return ChangeNotifierProvider(
-          create: (_) {
-            final provider = HistoryReadingProvider();
-            provider.initializeHistoryView(imageListProvider.images);
-            return provider;
-          },
-          child: Consumer<HistoryReadingProvider>(
-            builder: (context, provider, _) {
-              final recordings = provider.groupedRecordings;
-              final imageNames = recordings.keys.toList();
+    if (!_isInitialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-              // `selectedImageGroup`이 빈 문자열일 경우 자동으로 첫 번째 항목을 설정
-              if (provider.selectedImageGroup.isEmpty &&
-                  recordings.isNotEmpty) {
-                provider.setSelectedImageGroup(imageNames.first);
-              }
+    return ChangeNotifierProvider.value(
+      value: _provider,
+      child: Consumer<HistoryReadingProvider>(
+        builder: (context, provider, _) {
+          final recordings = provider.groupedRecordings;
+          final imageNames = recordings.keys.toList();
 
-              return Scaffold(
-                // 두 번째 AppBar
-                appBar: AppBar(
-                  title: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.record_voice_over,
+          // 선택된 이미지 그룹 자동 설정
+          if (provider.selectedImageGroup.isEmpty && recordings.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              provider.setSelectedImageGroup(imageNames.first);
+            });
+          }
 
-                      ),
-                      const SizedBox(width: 8), // 아이콘과 텍스트 사이 간격
-                      const Text(
-                        "녹음 히스토리",
-                        style: TextStyle(
-                          fontSize: 20, // 텍스트 크기 맞추기
-                        ),
-                      ),
-                    ],
-                  ),
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed:
-                        () => NavigationHelpers.goToPictureScreen(context),
+          return Scaffold(
+            appBar: AppBar(
+              title: const Row(
+                children: [
+                  Icon(Icons.record_voice_over),
+                  SizedBox(width: 8),
+                  Text("녹음 히스토리", style: TextStyle(fontSize: 20)),
+                ],
+              ),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => NavigationHelpers.goToPictureScreen(context),
+              ),
+            ),
+            body: recordings.isEmpty
+                ? const Center(child: Text("저장된 녹음이 없어요"))
+                : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: provider.selectedCategory,
+                    onChanged: (value) => provider.setSelectedCategory(value!),
+                    items: provider.categories
+                        .map((cat) => DropdownMenuItem(
+                      value: cat,
+                      child: Text(cat, style: const TextStyle(fontSize: 14)),
+                    ))
+                        .toList(),
                   ),
                 ),
-
-                body:
-                    recordings.isEmpty
-                        ? const Center(child: Text("저장된 녹음이 없어요"))
-                        : Column(
-                          children: [
-                            // 카테고리 드롭다운
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 8,
-                              ),
-                              child: DropdownButton<String>(
-                                isExpanded: true,
-                                value: provider.selectedCategory,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    provider.setSelectedCategory(value);
-                                  }
-                                },
-                                items:
-                                    provider.categories
-                                        .map(
-                                          (cat) => DropdownMenuItem(
-                                            value: cat,
-                                            child: Text(
-                                              cat,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-                            ),
-
-                            // 이미지 그룹 드롭다운
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 8,
-                              ),
-                              child: DropdownButton<String>(
-                                isExpanded: true,
-                                value: provider.selectedImageGroup,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    provider.setSelectedImageGroup(value);
-                                  }
-                                },
-                                items:
-                                    imageNames
-                                        .map(
-                                          (imageName) => DropdownMenuItem(
-                                            value: imageName,
-                                            child: Text(
-                                              imageName,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                              ),
-                            ),
-                            Expanded(child: _buildGroupedList(provider)),
-                          ],
-                        ),
-              );
-            },
-          ),
-        );
-      },
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: provider.selectedImageGroup,
+                    onChanged: (value) => provider.setSelectedImageGroup(value!),
+                    items: imageNames
+                        .map((imageName) => DropdownMenuItem(
+                      value: imageName,
+                      child: Text(imageName, style: const TextStyle(fontSize: 14)),
+                    ))
+                        .toList(),
+                  ),
+                ),
+                Expanded(child: _buildGroupedList(provider)),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -159,10 +139,7 @@ class HistoryReadingScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   imageModel.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ],

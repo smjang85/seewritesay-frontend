@@ -23,6 +23,7 @@ class NavigationHelpers {
     final uri = Uri(path: '/historyWriting', queryParameters: {
       'initialWithCategory': withCategory.toString(),
     });
+
     context.push(uri.toString()); // ✅ GoRouter 기반으로 이동
   }
 
@@ -56,7 +57,7 @@ class NavigationHelpers {
       }) {
     debugPrint("goToReadingScreen - imageModel : $imageModel , sentence : $sentence");
 
-    context.goNamed( // ✅ pushNamed → goNamed
+    context.pushNamed( // ✅ pushNamed → goNamed
       'reading',
       extra: {
         'sentence': sentence?.trim(),

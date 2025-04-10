@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:string_similarity/string_similarity.dart';
 import 'package:intl/intl.dart';
-import 'package:collection/collection.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
 
 class ReadingProvider extends ChangeNotifier {
@@ -61,27 +60,35 @@ class ReadingProvider extends ChangeNotifier {
       debugPrint("📄 파일 경로: ${f.path}");
     }
 
+    // ✅ imageId, imageName 기준으로 필터링
+    final imageId = imageModel?.id.toString();
+    final imageName = imageModel?.name.split('.').first;
+
     recordedPaths = files
         .map((f) => f.path.split('/').last.replaceAll('.aac', ''))
+        .where((name) =>
+        name.startsWith('${imageId}_${imageName}_'))
         .toList();
 
-    groupedRecordings = groupBy(recordedPaths, (String fileName) {
-      final parts = fileName.split('_');
-      debugPrint("📌 그룹핑용 분할: $parts");
-      return parts.length > 1 ? parts[1] : 'unknown'; // imageName 기준
-    });
+    debugPrint("✅ 해당 이미지 관련 녹음 개수: ${recordedPaths.length}");
 
-    for (final entry in groupedRecordings.entries) {
-      debugPrint("🗂 그룹: ${entry.key} -> ${entry.value.length}개 파일");
-      entry.value.sort((a, b) {
-        final aTime = a.split('_').last;
-        final bTime = b.split('_').last;
-        return bTime.compareTo(aTime);
-      });
+    // ✅ 하나의 그룹으로만 기록
+    if (imageName != null) {
+      groupedRecordings = {
+        imageName: List.from(recordedPaths)..sort((a, b) {
+          final aTime = a.split('_').last;
+          final bTime = b.split('_').last;
+          return bTime.compareTo(aTime); // 최신순
+        }),
+      };
+
+      debugPrint("🗂 그룹: $imageName -> ${groupedRecordings[imageName]?.length ?? 0}개 파일");
     }
 
     notifyListeners();
   }
+
+
 
   Future<void> startRecording() async {
     final status = await Permission.microphone.request();
@@ -132,6 +139,7 @@ class ReadingProvider extends ChangeNotifier {
     final dir = await getApplicationDocumentsDirectory();
     final fullPath = fileName.startsWith(dir.path) ? fileName : '${dir.path}/$fileName';
 
+    debugPrint("playRecording fullPath: $fullPath");
     if (_isPlaying) {
       await _player.stopPlayer();
       _isPlaying = false;

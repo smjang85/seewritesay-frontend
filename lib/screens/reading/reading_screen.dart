@@ -38,6 +38,8 @@ class ReadingContent extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
+            debugPrint("isFromWriting : $isFromWriting");
+            debugPrint("isFromPicture : $isFromPicture");
             if (isFromWriting) {
               NavigationHelpers.goToWritingScreen(context, provider.imageModel!, sentence: provider.sentence);
             } else if (isFromPicture) {

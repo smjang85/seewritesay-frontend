@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:SeeWriteSay/constants/api_constants.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HistoryReadingProvider extends ChangeNotifier {
   final FlutterSoundPlayer _player = FlutterSoundPlayer();
@@ -33,6 +33,7 @@ class HistoryReadingProvider extends ChangeNotifier {
 
   void setSelectedImageGroup(String value) {
     _selectedImageGroup = value;
+    debugPrint('🎯 selectedImageGroup: $_selectedImageGroup');
     notifyListeners();
   }
 
@@ -56,7 +57,7 @@ class HistoryReadingProvider extends ChangeNotifier {
 
   Future<void> deleteHistoryItem(String fileName) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
+      //final dir = await getApplicationDocumentsDirectory();
       final fullPath = '\${dir.path}/\$fileName';
       final file = File(fullPath);
       if (await file.exists()) {
@@ -71,8 +72,18 @@ class HistoryReadingProvider extends ChangeNotifier {
 
   Future<void> playRecording(String fileName) async {
     try {
+
+
       final dir = await getApplicationDocumentsDirectory();
-      final fullPath = '\${dir.path}/\$fileName';
+      final fullPath = '${dir.path}/$fileName';
+      debugPrint("history playRecording fullPath : $fullPath");
+      //
+      // final status = await Permission.storage.request();
+      // if (!status.isGranted) {
+      //   debugPrint('❌ 권한이 없습니다!');
+      //   return;
+      // }
+      //
       if (_player.isPlaying) {
         await _player.stopPlayer();
         _isPlaying = false;
@@ -88,7 +99,7 @@ class HistoryReadingProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ 재생 오류: \$e');
+      debugPrint('❌ 재생 오류: $e');
     }
   }
 
@@ -168,6 +179,7 @@ class HistoryReadingProvider extends ChangeNotifier {
     _groupedRecordings = newGrouped;
     _imageModelMap = newMap;
 
+    debugPrint('📦 groupedRecordings keys: ${_groupedRecordings.keys}');
     if (_groupedRecordings.isNotEmpty) {
       _selectedImageGroup = _groupedRecordings.keys.first;
     } else {
