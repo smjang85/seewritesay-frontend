@@ -23,13 +23,15 @@ class HistoryWritingProvider extends ChangeNotifier {
   String _selectedCategory = '전체';
 
   List<String> get categories => _categories;
+
   String get selectedCategory => _selectedCategory;
 
+  bool _isLoading = false;
+
+  bool get isLoading => _isLoading;
+
   /// 생성자에서 자동 로딩
-  HistoryWritingProvider({
-    this.imageId,
-    this.loadWithCategory = false,
-  }) {
+  HistoryWritingProvider({this.imageId, this.loadWithCategory = false}) {
     if (loadWithCategory) {
       loadHistoryWithCategory();
     } else {
@@ -51,9 +53,10 @@ class HistoryWritingProvider extends ChangeNotifier {
     if (_selectedCategory == '전체') {
       _filteredHistory = _allHistory;
     } else {
-      _filteredHistory = _allHistory
-          .where((e) => e.categoryName == _selectedCategory)
-          .toList();
+      _filteredHistory =
+          _allHistory
+              .where((e) => e.categoryName == _selectedCategory)
+              .toList();
     }
   }
 
@@ -70,37 +73,44 @@ class HistoryWritingProvider extends ChangeNotifier {
 
   /// 일반 히스토리 불러오기
   Future<void> loadHistory() async {
-    debugPrint("HistoryWritingProvider loadHistory called");
+    _isLoading = true;
+    notifyListeners();
+
     try {
-      final loaded = await HistoryWritingApiService.fetchHistory(imageId: imageId);
-
-      debugPrint("HistoryWritingProvider loaded : $loaded");
-
-      _filteredHistory = loaded
-          .map((e) => HistoryWritingModel.fromJson(e))
-          .toList()
-        ..sort((a, b) =>
-            (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
-
-
+      final loaded = await HistoryWritingApiService.fetchHistory(
+        imageId: imageId,
+      );
+      _filteredHistory =
+          loaded.map((e) => HistoryWritingModel.fromJson(e)).toList()..sort(
+            (a, b) => (b.createdAt ?? DateTime(1970)).compareTo(
+              a.createdAt ?? DateTime(1970),
+            ),
+          );
     } catch (e) {
       debugPrint("❌ 서버 히스토리 불러오기 실패: $e");
       _filteredHistory = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   /// 카테고리 기반 전체 히스토리 불러오기
   Future<void> loadHistoryWithCategory() async {
+    _isLoading = true;
+    notifyListeners();
+
     try {
       final data = await HistoryWritingApiService.fetchHistoryWithCategory();
       _allHistory = data;
       _extractCategories();
       _applyCategoryFilter();
-      notifyListeners();
     } catch (e, stack) {
       debugPrint("❌ 히스토리 불러오기 실패: $e");
       debugPrint("📌 Stacktrace: $stack");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
+import 'package:SeeWriteSay/widgets/common_appbar.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -36,14 +37,11 @@ class WritingScreenContent extends StatelessWidget {
         provider.cleanedCorrection == provider.textController.text.trim();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text("작문 연습 (${provider.feedbackRemainingText})"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            NavigationHelpers.goToPictureScreen(context);
-          },
-        ),
+      appBar: CommonAppBar(
+        title: "작문 연습 (${provider.feedbackRemainingText})",
+        onLeadingTap: () {
+          NavigationHelpers.goToPictureScreen(context);
+        },
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -73,11 +71,20 @@ class WritingScreenContent extends StatelessWidget {
                   maxLines: 5,
                   enabled: provider.isTextEditable,
                   // ✅ 비활성화 제어
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: "이 장면에 대해 영어로 이야기해보세요.",
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.indigo, width: 2),
+                    ),
                   ),
                   onTap: provider.feedbackShown ? provider.resetFeedback : null,
+
                 ),
                 if (provider.isLoading) ...[
                   const SizedBox(height: 20),

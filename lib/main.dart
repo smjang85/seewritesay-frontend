@@ -14,7 +14,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
 
-  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'prod');
   await dotenv.load(fileName: flavor == 'prod' ? '.env.prod' : '.env.dev');
 
   runApp(
@@ -39,7 +39,20 @@ class SeeWriteSayApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'See Write Say',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.indigo),
+      theme: ThemeData(
+        scaffoldBackgroundColor: Colors.white, // 바디 기본 배경색
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,       // 앱바 배경 흰색
+          foregroundColor: Colors.black,       // 앱바 텍스트/아이콘 검정
+          elevation: 1,                         // 앱바 그림자 최소화
+        ),
+        colorScheme: ColorScheme.fromSwatch(
+          primarySwatch: Colors.indigo,
+        ).copyWith(
+          secondary: Colors.indigoAccent,
+        ),
+      ),
+
       routerConfig: appRouter,
     );
   }

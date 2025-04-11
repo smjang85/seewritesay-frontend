@@ -1,5 +1,8 @@
 import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
 import 'package:SeeWriteSay/widgets/app_exit_scope.dart';
+import 'package:SeeWriteSay/widgets/common_appbar.dart';
+import 'package:SeeWriteSay/widgets/common_dropdown.dart';
+import 'package:SeeWriteSay/widgets/common_empty_message.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -40,10 +43,14 @@ class _PictureScreenState extends State<PictureScreen> {
     final image = provider.selectedImage;
     final alreadyUsed = provider.isAlreadyUsed;
 
+    final hasImages = provider.images.isNotEmpty;
+
     return AppExitScope(
       child: Scaffold(
         backgroundColor: const Color(0xFFF9F8F3),
-        appBar: AppBar(title: Text("See Write Say")),
+        appBar: const CommonAppBar(
+          title: "See Write Say",
+        ),
         drawer: AppDrawerMenu(
           isLoggedIn: isLoggedIn,
           onLogout: () {
@@ -52,15 +59,28 @@ class _PictureScreenState extends State<PictureScreen> {
         ),
         body: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
-          child: Column(
-            children: [
-              Text("이 장면을 보고 영어로 이야기해보세요", style: TextStyle(fontSize: 18)),
-              SizedBox(height: 20),
-              Expanded(child: _buildImageSection(image, alreadyUsed, provider)),
-              SizedBox(height: 20),
-              _buildActionButtons(image, provider),
-            ],
-          ),
+          child:
+              hasImages
+                  ? Column(
+                    children: [
+                      Text(
+                        "이 장면을 보고 영어로 이야기해보세요",
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      SizedBox(height: 20),
+                      Expanded(
+                        child: _buildImageSection(image, alreadyUsed, provider),
+                      ),
+                      SizedBox(height: 20),
+                      _buildActionButtons(image, provider),
+                    ],
+                  )
+                  : Center(
+                    child: Text(
+                      "조회된 이미지가 없습니다.",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  ),
         ),
       ),
     );
@@ -97,20 +117,10 @@ class _PictureScreenState extends State<PictureScreen> {
         // 🎯 유형 선택 드롭다운 (이미지 폭과 맞춤)
         SizedBox(
           width: 380,
-          child: DropdownButtonFormField<String>(
+          child: CommonDropdown(
             value: selectedCategory,
-            decoration: const InputDecoration(
-              labelText: "유형",
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            ),
-            items:
-                categories.map((category) {
-                  return DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(category, style: const TextStyle(fontSize: 14)),
-                  );
-                }).toList(),
+            items: categories,
+            label: "유형",
             onChanged: (value) {
               if (value != null) {
                 provider.setSelectedCategory(value);
@@ -168,4 +178,11 @@ class _PictureScreenState extends State<PictureScreen> {
       ],
     );
   }
+}
+
+Widget _buildNoImageContent() {
+  return const CommonEmptyMessage(
+    icon: Icons.image_not_supported,
+    message: '조회된 이미지가 없습니다.',
+  );
 }

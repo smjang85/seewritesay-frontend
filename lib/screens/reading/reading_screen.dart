@@ -1,6 +1,8 @@
 import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
+import 'package:SeeWriteSay/style/text_styles.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
+import 'package:SeeWriteSay/widgets/common_appbar.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -33,23 +35,26 @@ class ReadingContent extends StatelessWidget {
     final isFromPicture = provider.imageModel != null && provider.imageModel!.path.isNotEmpty && provider.sentence.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("리딩 연습"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            debugPrint("isFromWriting : $isFromWriting");
-            debugPrint("isFromPicture : $isFromPicture");
-            if (isFromWriting) {
-              NavigationHelpers.goToWritingScreen(context, provider.imageModel!, sentence: provider.sentence);
-            } else if (isFromPicture) {
-              NavigationHelpers.goToPictureScreen(context);
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
+      appBar: CommonAppBar(
+        title: "리딩 연습",
+        onLeadingTap: () {
+          debugPrint("isFromWriting : $isFromWriting");
+          debugPrint("isFromPicture : $isFromPicture");
+
+          if (isFromWriting) {
+            NavigationHelpers.goToWritingScreen(
+              context,
+              provider.imageModel!,
+              sentence: provider.sentence,
+            );
+          } else if (isFromPicture) {
+            NavigationHelpers.goToPictureScreen(context);
+          } else {
+            Navigator.pop(context);
+          }
+        },
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -102,7 +107,7 @@ class ReadingContent extends StatelessWidget {
               ...provider.recordedPaths.asMap().entries.map((entry) {
                 final fileName = entry.value;
                 return ListTile(
-                  title: Text(CommonLogicService.formatReadableTime(fileName), style: const TextStyle(fontSize: 12)),
+                  title: Text(CommonLogicService.extractRecordingTimestamp(fileName), style: kTimestampTextStyle,),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

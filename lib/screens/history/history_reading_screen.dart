@@ -1,6 +1,10 @@
 import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:SeeWriteSay/providers/history/history_reading_provider.dart';
+import 'package:SeeWriteSay/style/text_styles.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
+import 'package:SeeWriteSay/widgets/common_appbar.dart';
+import 'package:SeeWriteSay/widgets/common_dropdown.dart';
+import 'package:SeeWriteSay/widgets/common_empty_message.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -61,51 +65,29 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
           }
 
           return Scaffold(
-            appBar: AppBar(
-              title: const Row(
-                children: [
-                  Icon(Icons.record_voice_over),
-                  SizedBox(width: 8),
-                  Text("녹음 히스토리", style: TextStyle(fontSize: 20)),
-                ],
-              ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => NavigationHelpers.goToPictureScreen(context),
-              ),
+            appBar: CommonAppBar(
+              title: "녹음 히스토리",
+              leadingIcon: Icons.record_voice_over,
+              onLeadingTap: () => NavigationHelpers.goToPictureScreen(context),
             ),
+
             body: recordings.isEmpty
-                ? const Center(child: Text("저장된 녹음이 없어요"))
+                ? const CommonEmptyMessage(message: '진행한 녹음이 없습니다.')
                 : Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    value: provider.selectedCategory,
-                    onChanged: (value) => provider.setSelectedCategory(value!),
-                    items: provider.categories
-                        .map((cat) => DropdownMenuItem(
-                      value: cat,
-                      child: Text(cat, style: const TextStyle(fontSize: 14)),
-                    ))
-                        .toList(),
-                  ),
+                CommonDropdown(
+                  label: "카테고리",
+                  value: provider.selectedCategory,
+                  items: provider.categories,
+                  onChanged: (value) => provider.setSelectedCategory(value!),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    value: provider.selectedImageGroup,
-                    onChanged: (value) => provider.setSelectedImageGroup(value!),
-                    items: imageNames
-                        .map((imageName) => DropdownMenuItem(
-                      value: imageName,
-                      child: Text(imageName, style: const TextStyle(fontSize: 14)),
-                    ))
-                        .toList(),
-                  ),
+                CommonDropdown(
+                  label: "이미지",
+                  value: provider.selectedImageGroup,
+                  items: imageNames,
+                  onChanged: (value) => provider.setSelectedImageGroup(value!),
                 ),
+
                 Expanded(child: _buildGroupedList(provider)),
               ],
             ),
@@ -138,15 +120,21 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  imageModel.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  imageModel.description?.isNotEmpty == true
+                      ? imageModel.description!
+                      : imageModel.name,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  softWrap: true,          // 줄바꿈 허용
+                  overflow: TextOverflow.visible, // 오버플로 생략 없이 그대로 표시
                 ),
               ),
             ],
           ),
         const SizedBox(height: 16),
         ...files.map((fileName) {
-          final formattedTime = CommonLogicService.formatReadableTime(fileName);
+          debugPrint("fileName : $fileName");
+          final formattedTime = CommonLogicService.extractRecordingTimestamp(fileName);
+          debugPrint("formattedTime : $fileName");
 
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 6),
@@ -157,7 +145,7 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
                   await provider.deleteHistoryItem(fileName);
                 },
               ),
-              title: Text(formattedTime),
+              title: Text(formattedTime, style: kTimestampTextStyle,),
               trailing: IconButton(
                 icon: Icon(
                   provider.isPlaying ? Icons.pause : Icons.play_arrow,

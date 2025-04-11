@@ -25,7 +25,7 @@ class LoginScreenContent extends StatelessWidget {
     FlutterNativeSplash.remove(); // ✅ 스플래시 제거
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: Colors.white,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30.0),

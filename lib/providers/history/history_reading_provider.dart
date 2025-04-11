@@ -41,13 +41,18 @@ class HistoryReadingProvider extends ChangeNotifier {
     _allImages = imageList;
     debugPrint('✅ 이미지 개수: ${imageList.length}');
 
+    // 🎵 Player 열기
+    if (!_player.isOpen()) {
+      await _player.openPlayer();
+      debugPrint('🎵 플레이어가 열렸습니다');
+    }
+
     final dir = await getApplicationDocumentsDirectory();
     final files = dir.listSync().whereType<File>().toList();
-    _allRecordings =
-        files
-            .map((f) => f.path.split('/').last)
-            .where((name) => name.endsWith('.aac'))
-            .toList();
+    _allRecordings = files
+        .map((f) => f.path.split('/').last)
+        .where((name) => name.endsWith('.aac'))
+        .toList();
 
     debugPrint('✅ 녹음 파일 목록: $_allRecordings');
 
