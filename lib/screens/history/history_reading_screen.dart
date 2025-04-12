@@ -2,7 +2,6 @@ import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:SeeWriteSay/providers/history/history_reading_provider.dart';
 import 'package:SeeWriteSay/style/text_styles.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
-import 'package:SeeWriteSay/widgets/common_appbar.dart';
 import 'package:SeeWriteSay/widgets/common_dropdown.dart';
 import 'package:SeeWriteSay/widgets/common_empty_message.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
+
 class HistoryReadingScreen extends StatefulWidget {
   const HistoryReadingScreen({super.key});
 
@@ -45,9 +45,7 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return ChangeNotifierProvider.value(
@@ -57,7 +55,6 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
           final recordings = provider.groupedRecordings;
           final imageNames = recordings.keys.toList();
 
-          // 선택된 이미지 그룹 자동 설정
           if (provider.selectedImageGroup.isEmpty && recordings.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               provider.setSelectedImageGroup(imageNames.first);
@@ -65,32 +62,41 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
           }
 
           return Scaffold(
-            appBar: CommonAppBar(
-              title: "녹음 히스토리",
-              leadingIcon: Icons.record_voice_over,
-              onLeadingTap: () => NavigationHelpers.goToPictureScreen(context),
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => NavigationHelpers.goToPictureScreen(context),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.edit_note),
+                  SizedBox(width: 8),
+                  Text("녹음 히스토리"),
+                ],
+              ),
             ),
-
-            body: recordings.isEmpty
-                ? const CommonEmptyMessage(message: '진행한 녹음이 없습니다.')
-                : Column(
-              children: [
-                CommonDropdown(
-                  label: "카테고리",
-                  value: provider.selectedCategory,
-                  items: provider.categories,
-                  onChanged: (value) => provider.setSelectedCategory(value!),
-                ),
-                CommonDropdown(
-                  label: "이미지",
-                  value: provider.selectedImageGroup,
-                  items: imageNames,
-                  onChanged: (value) => provider.setSelectedImageGroup(value!),
-                ),
-
-                Expanded(child: _buildGroupedList(provider)),
-              ],
-            ),
+            body:
+                recordings.isEmpty
+                    ? const CommonEmptyMessage(message: '진행한 녹음이 없습니다.')
+                    : Column(
+                      children: [
+                        CommonDropdown(
+                          label: "카테고리",
+                          value: provider.selectedCategory,
+                          items: provider.categories,
+                          onChanged:
+                              (value) => provider.setSelectedCategory(value!),
+                        ),
+                        CommonDropdown(
+                          label: "이미지",
+                          value: provider.selectedImageGroup,
+                          items: imageNames,
+                          onChanged:
+                              (value) => provider.setSelectedImageGroup(value!),
+                        ),
+                        Expanded(child: _buildGroupedList(provider)),
+                      ],
+                    ),
           );
         },
       ),
@@ -124,39 +130,108 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
                       ? imageModel.description!
                       : imageModel.name,
                   style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  softWrap: true,          // 줄바꿈 허용
-                  overflow: TextOverflow.visible, // 오버플로 생략 없이 그대로 표시
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
                 ),
               ),
             ],
           ),
         const SizedBox(height: 16),
+        // Only show the progress bar and time info if a file is selected and playing
+
+        // 프로그레스 바는 항상 보이고, 선택 후에만 초/시간을 업데이트
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              Slider(
+                value:
+                    provider.position.inMilliseconds
+                        .clamp(0, provider.duration.inMilliseconds.toDouble())
+                        .toDouble(),
+                max: provider.duration.inMilliseconds.toDouble(),
+                onChanged: (value) {
+                  provider.seekTo(Duration(milliseconds: value.toInt()));
+                },
+              ),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // 파일이 재생 중일 때만 초와 시간을 표시하도록 조건 추가
+                  Text(
+                    provider.currentFile != null &&
+                            provider.duration.inMilliseconds > 0
+                        ? _formatTime(provider.position)
+                        : '00:00', // 재생되지 않으면 00:00을 표시
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  Text(
+                    provider.currentFile != null &&
+                            provider.duration.inMilliseconds > 0
+                        ? _formatTime(provider.duration)
+                        : '00:00', // 전체 시간도 동일하게 표시
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
         ...files.map((fileName) {
-          debugPrint("fileName : $fileName");
-          final formattedTime = CommonLogicService.extractRecordingTimestamp(fileName);
-          debugPrint("formattedTime : $fileName");
+          final formattedTime = CommonLogicService.extractRecordingTimestamp(
+            fileName,
+          );
 
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 6),
             child: ListTile(
+              onTap: () {
+                setState(() {
+                  provider.setSelectedImageGroup(fileName);
+                });
+              },
               leading: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.redAccent),
-                onPressed: () async {
-                  await provider.deleteHistoryItem(fileName);
-                },
+                onPressed:
+                    () async => await provider.deleteHistoryItem(fileName),
               ),
-              title: Text(formattedTime, style: kTimestampTextStyle,),
-              trailing: IconButton(
-                icon: Icon(
-                  provider.isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.indigo,
-                ),
-                onPressed: () => provider.playRecording(fileName),
+              title: Text(formattedTime, style: kTimestampTextStyle),
+              trailing: Consumer<HistoryReadingProvider>(
+                builder: (context, provider, _) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          provider.isPausedFile(fileName)
+                              ? Icons.play_arrow
+                              : provider.isPlayingFile(fileName)
+                              ? Icons.pause
+                              : Icons.play_arrow,
+                        ),
+                        onPressed: () => provider.playRecording(fileName),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.stop),
+                        onPressed: () => provider.stopPlayback(),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           );
         }),
       ],
     );
+  }
+
+  String _formatTime(Duration duration) {
+    final seconds = duration.inSeconds;
+    final minutes = (seconds / 60).floor();
+    final remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 }

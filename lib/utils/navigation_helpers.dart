@@ -27,6 +27,10 @@ class NavigationHelpers {
     context.push(uri.toString()); // ✅ GoRouter 기반으로 이동
   }
 
+  static void goToHistoryReadingScreen(BuildContext context) {
+    context.push('/historyReading');
+  }
+
   static void goToLoginScreen(BuildContext context) {
     context.goNamed('login'); // GoRouter에서 name이 'login'인 라우트로 이동
   }
@@ -73,7 +77,5 @@ class NavigationHelpers {
     context.pop(result);
   }
 
-  static void goToHistoryReadingScreen(BuildContext context) {
-    GoRouter.of(context).go('/historyReading');
-  }
+
 }

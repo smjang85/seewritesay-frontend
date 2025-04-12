@@ -1,8 +1,6 @@
 import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
 import 'package:SeeWriteSay/widgets/app_exit_scope.dart';
-import 'package:SeeWriteSay/widgets/common_appbar.dart';
 import 'package:SeeWriteSay/widgets/common_dropdown.dart';
-import 'package:SeeWriteSay/widgets/common_empty_message.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -48,9 +46,13 @@ class _PictureScreenState extends State<PictureScreen> {
     return AppExitScope(
       child: Scaffold(
         backgroundColor: const Color(0xFFF9F8F3),
-        appBar: const CommonAppBar(
-          title: "See Write Say",
+
+        appBar: AppBar(
+          title: Row(
+            children: [SizedBox(width: 8), Text("See Write Say")],
+          ),
         ),
+
         drawer: AppDrawerMenu(
           isLoggedIn: isLoggedIn,
           onLogout: () {
@@ -178,11 +180,4 @@ class _PictureScreenState extends State<PictureScreen> {
       ],
     );
   }
-}
-
-Widget _buildNoImageContent() {
-  return const CommonEmptyMessage(
-    icon: Icons.image_not_supported,
-    message: '조회된 이미지가 없습니다.',
-  );
 }

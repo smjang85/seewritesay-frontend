@@ -1,52 +1,51 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_sound/flutter_sound.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:string_similarity/string_similarity.dart';
-import 'package:intl/intl.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
 
 class ReadingProvider extends ChangeNotifier {
+  // 기본 상태값
   String sentence = '';
   ImageModel? imageModel;
-
-  String inputText = '';
-  String feedback = '';
-  double accuracy = 0.0;
-  bool showResult = false;
 
   bool _isRecording = false;
   bool get isRecording => _isRecording;
 
-  bool _isPlaying = false;
-  bool get isPlaying => _isPlaying;
+  bool get isPlayingMyVoice => _myVoicePlayer.playing;
+  bool get isPlayingHistory => _historyPlayer.playing;
 
   String currentFilePath = '';
+  String? currentlyPlayingHistory;
+
   List<String> recordedPaths = [];
-  Map<String, List<String>> groupedRecordings = {};
 
   Duration position = Duration.zero;
   Duration duration = Duration.zero;
+  Duration _pausedPosition = Duration.zero;
 
-  final FlutterTts _flutterTts = FlutterTts();
+  // 도구들
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  final AudioPlayer _myVoicePlayer = AudioPlayer();
+  final AudioPlayer _historyPlayer = AudioPlayer();
+  StreamSubscription<Duration>? _positionSubscription;
 
-  StreamSubscription? _playerSubscription;
+  bool showResult = false;
+  double accuracy = 0.0;
+  String feedback = '';
 
+  // 초기화
   Future<void> initialize(String sentence, {ImageModel? imageModel}) async {
-    debugPrint("🟡 ReadingProvider.initialize 호출됨");
-    debugPrint("📌 sentence: $sentence");
-    debugPrint("📌 imageModel: $imageModel");
-
     this.sentence = sentence;
     this.imageModel = imageModel;
 
     await _recorder.openRecorder();
-    await _player.openPlayer();
+    await _myVoicePlayer.setLoopMode(LoopMode.off);
+    await _historyPlayer.setLoopMode(LoopMode.off);
 
     final dir = await getApplicationDocumentsDirectory();
     final files = dir
@@ -55,41 +54,20 @@ class ReadingProvider extends ChangeNotifier {
         .where((f) => f.path.endsWith(".aac"))
         .toList();
 
-    debugPrint("📂 찾은 녹음 파일 개수: ${files.length}");
-    for (final f in files) {
-      debugPrint("📄 파일 경로: ${f.path}");
-    }
-
-    // ✅ imageId, imageName 기준으로 필터링
-    final imageId = imageModel?.id.toString();
-    final imageName = imageModel?.name.split('.').first;
+    final imageId = imageModel?.id.toString() ?? '';
+    final imageName = imageModel?.name.replaceAll(RegExp(r'\.\w+$'), '') ?? '';
 
     recordedPaths = files
         .map((f) => f.path.split('/').last.replaceAll('.aac', ''))
-        .where((name) =>
-        name.startsWith('${imageId}_${imageName}_'))
+        .where((name) => name.startsWith('${imageId}_${imageName}_'))
         .toList();
-
-    debugPrint("✅ 해당 이미지 관련 녹음 개수: ${recordedPaths.length}");
-
-    // ✅ 하나의 그룹으로만 기록
-    if (imageName != null) {
-      groupedRecordings = {
-        imageName: List.from(recordedPaths)..sort((a, b) {
-          final aTime = a.split('_').last;
-          final bTime = b.split('_').last;
-          return bTime.compareTo(aTime); // 최신순
-        }),
-      };
-
-      debugPrint("🗂 그룹: $imageName -> ${groupedRecordings[imageName]?.length ?? 0}개 파일");
-    }
 
     notifyListeners();
   }
 
+  String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
-
+  // 녹음 시작
   Future<void> startRecording() async {
     final status = await Permission.microphone.request();
     if (!status.isGranted) return;
@@ -98,16 +76,16 @@ class ReadingProvider extends ChangeNotifier {
     notifyListeners();
 
     final dir = await getApplicationDocumentsDirectory();
-    final imageId = imageModel?.id ?? 'unknown';
-    final imageName = imageModel?.name.split('.').first ?? 'unknown';
     final now = DateTime.now();
-    final dateStr = DateFormat('yyyyMMdd_HHmmss').format(now);
-    final fileName = '${imageId}_${imageName}_$dateStr';
+    final formatted = '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_${_twoDigits(now.hour)}${_twoDigits(now.minute)}${_twoDigits(now.second)}';
+    final fileName = '${imageModel?.id}_${imageModel?.name.split('.').first}_$formatted';
+
     currentFilePath = '${dir.path}/$fileName.aac';
 
     await _recorder.startRecorder(toFile: currentFilePath);
   }
 
+  // 녹음 종료
   Future<void> stopRecording() async {
     await _recorder.stopRecorder();
     _isRecording = false;
@@ -119,88 +97,83 @@ class ReadingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 음성 피드백 평가
   void evaluateRecording(String inputText) {
-    this.inputText = inputText;
     final similarity = sentence.similarityTo(inputText);
     accuracy = similarity;
-
-    if (similarity > 0.8) {
-      feedback = '잘 읽었어요!';
-    } else if (similarity > 0.5) {
-      feedback = '조금 더 정확히 읽어보세요.';
-    } else {
-      feedback = '다시 한 번 도전해볼까요?';
-    }
-
+    feedback = (similarity > 0.8)
+        ? '잘 읽었어요!'
+        : (similarity > 0.5)
+        ? '조금 더 정확히 읽어보세요.'
+        : '다시 한 번 도전해볼까요?';
     notifyListeners();
   }
 
-  Future<void> playRecording(String fileName) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final fullPath = fileName.startsWith(dir.path) ? fileName : '${dir.path}/$fileName';
+  // 내 음성 듣기
+  Future<void> playMyVoiceRecording(String filePath) async {
+    await _myVoicePlayer.stop();
+    await _myVoicePlayer.setFilePath(filePath);
+    await _myVoicePlayer.play();
+    notifyListeners();
+  }
 
-    debugPrint("playRecording fullPath: $fullPath");
-    if (_isPlaying) {
-      await _player.stopPlayer();
-      _isPlaying = false;
-      notifyListeners();
+  // 히스토리 재생
+  Future<void> playHistoryRecording(String filePath) async {
+    if (currentlyPlayingHistory == filePath && _historyPlayer.playing) {
+      await pauseHistoryRecording();
       return;
     }
 
-    await _player.startPlayer(
-      fromURI: fullPath,
-      whenFinished: () {
-        _isPlaying = false;
-        position = Duration.zero;
-        notifyListeners();
-      },
-    );
+    if (currentlyPlayingHistory != filePath) {
+      await stopHistoryRecording();
+      await _historyPlayer.setFilePath(filePath);
+    }
 
-    _isPlaying = true;
-    _playerSubscription = _player.onProgress?.listen((event) {
-      position = event.position;
-      duration = event.duration;
+    currentlyPlayingHistory = filePath;
+    await _historyPlayer.play();
+
+    _positionSubscription?.cancel();
+    _positionSubscription = _historyPlayer.positionStream.listen((pos) {
+      position = pos;
+      duration = _historyPlayer.duration ?? Duration.zero;
       notifyListeners();
     });
-  }
-
-  void seekTo(double value) {
-    final seekPosition = Duration(
-      milliseconds: (duration.inMilliseconds * value).toInt(),
-    );
-    _player.seekToPlayer(seekPosition);
-  }
-
-  void _updateHistory(String fileName) async {
-    if (fileName.isEmpty) return;
-
-    final imageName = fileName.split('_')[1];
-    groupedRecordings.putIfAbsent(imageName, () => []);
-    groupedRecordings[imageName]!.remove(fileName);
-    groupedRecordings[imageName]!.insert(0, fileName);
-
-    final allFiles = groupedRecordings.values.expand((list) => list).toList();
-    recordedPaths = allFiles;
-
-    if (groupedRecordings[imageName]!.length > 5) {
-      final removed = groupedRecordings[imageName]!.removeLast();
-      final dir = await getApplicationDocumentsDirectory();
-      final path = '${dir.path}/$removed.aac';
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    }
 
     notifyListeners();
   }
 
-  Future<void> deleteHistoryItem(String fileName) async {
-    final imageName = fileName.split('_')[1];
-    groupedRecordings[imageName]?.remove(fileName);
-    if (groupedRecordings[imageName]?.isEmpty ?? true) {
-      groupedRecordings.remove(imageName);
-    }
+  Future<void> pauseHistoryRecording() async {
+    _pausedPosition = position;
+    await _historyPlayer.pause();
+    notifyListeners();
+  }
 
-    recordedPaths = groupedRecordings.values.expand((list) => list).toList();
+  Future<void> resumeHistoryRecording() async {
+    if (currentlyPlayingHistory == null) return;
+    await _historyPlayer.seek(_pausedPosition);
+    await _historyPlayer.play();
+    notifyListeners();
+  }
+
+  Future<void> stopHistoryRecording() async {
+    await _historyPlayer.stop();
+    currentlyPlayingHistory = null;
+    _pausedPosition = Duration.zero;
+    notifyListeners();
+  }
+
+  // 재생 여부 확인
+  bool isPlayingHistoryFile(String fileName) =>
+      _historyPlayer.playing && (currentlyPlayingHistory?.contains(fileName) ?? false);
+
+  // 프로그레스바 시크
+  void seekTo(Duration value) async {
+    await _myVoicePlayer.seek(value);
+  }
+
+  // 히스토리 삭제
+  Future<void> deleteHistoryItem(String fileName) async {
+    recordedPaths.remove(fileName);
     notifyListeners();
 
     final dir = await getApplicationDocumentsDirectory();
@@ -210,18 +183,22 @@ class ReadingProvider extends ChangeNotifier {
     }
   }
 
-  void disposeResources() {
-    _flutterTts.stop();
-    _recorder.stopRecorder();
-    _player.stopPlayer();
-    _playerSubscription?.cancel();
+  // 최신 히스토리 추가
+  void _updateHistory(String fileName) {
+    recordedPaths.insert(0, fileName);
+    if (recordedPaths.length > 2) {
+      recordedPaths.removeLast();
+    }
+    notifyListeners();
   }
 
+  // 해제
   @override
   void dispose() {
-    disposeResources();
     _recorder.closeRecorder();
-    _player.closePlayer();
+    _myVoicePlayer.dispose();
+    _historyPlayer.dispose();
+    _positionSubscription?.cancel();
     super.dispose();
   }
 }

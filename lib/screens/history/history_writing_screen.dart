@@ -48,11 +48,7 @@ class HistoryWritingContent extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          children: [
-            Icon(Icons.edit_note),
-            SizedBox(width: 8),
-            Text("진행한 작문"),
-          ],
+          children: [Icon(Icons.edit_note), SizedBox(width: 8), Text("진행한 작문")],
         ),
       ),
 
@@ -61,25 +57,20 @@ class HistoryWritingContent extends StatelessWidget {
               ? const Center(child: CircularProgressIndicator())
               : Column(
                 children: [
-                  if (provider.categories.length > 1 &&
-                      provider.imageId == null)
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 16,
-                        right: 16,
-                        top: 16,
-                        bottom: 8,
+                  if (provider.categories.length > 1 && provider.imageId == null)
+                      SizedBox(
+                        width: 380,
+                        child: CommonDropdown(
+                          label: "카테고리",
+                          value: provider.selectedCategory,
+                          items: provider.categories,
+                          onChanged: (value) {
+                            if (value != null) {
+                              provider.setSelectedCategory(value);
+                            }
+                          },
+                        ),
                       ),
-                      child: CommonDropdown(
-                        value: provider.selectedCategory,
-                        items: provider.categories,
-                        onChanged: (value) {
-                          if (value != null) {
-                            provider.setSelectedCategory(value);
-                          }
-                        },
-                      ),
-                    ),
                   Expanded(
                     child:
                         historyList.isEmpty

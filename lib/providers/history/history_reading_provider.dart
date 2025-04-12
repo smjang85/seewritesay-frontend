@@ -1,131 +1,67 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
-import 'package:flutter_sound/flutter_sound.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class HistoryReadingProvider extends ChangeNotifier {
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
-  bool _isPlaying = false;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
-  Map<String, List<String>> _groupedRecordings = {};
-  Map<String, ImageModel> _imageModelMap = {};
-  String _selectedImageGroup = '';
-
-  Map<String, List<String>> get groupedRecordings => _groupedRecordings;
-
-  Map<String, ImageModel> get imageModelMap => _imageModelMap;
-
-  String get selectedImageGroup => _selectedImageGroup;
-
-  bool get isPlaying => _isPlaying;
-
-  List<ImageModel> _allImages = [];
-  List<String> _categories = ['전체'];
-  String _selectedCategory = '전체';
-
-  List<String> get categories => _categories;
-
-  String get selectedCategory => _selectedCategory;
-
+  Map<String, List<String>> groupedRecordings = {};
+  Map<String, ImageModel> imageModelMap = {};
+  String selectedImageGroup = '';
   List<String> _allRecordings = [];
 
-  void setSelectedImageGroup(String value) {
-    _selectedImageGroup = value;
-    debugPrint('🎯 selectedImageGroup: $_selectedImageGroup');
-    notifyListeners();
+  List<ImageModel> _allImages = [];
+  List<String> categories = ['전체'];
+  String selectedCategory = '전체';
+
+  String? _currentFile;
+  bool _isPlaying = false;
+  bool _isPaused = false;
+  Duration _pausedPosition = Duration.zero;
+
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+
+  Duration get position => _audioPlayer.position;
+  Duration get duration => _audioPlayer.duration ?? Duration.zero;
+  String? get currentFile => _currentFile;
+
+  StreamSubscription<Duration>? _positionSubscription;
+
+  bool isPlayingFile(String fileName) {
+    return _isPlaying && !_isPaused && _currentFile == fileName;
+  }
+
+  bool isPausedFile(String fileName) {
+    return _isPaused && _currentFile == fileName;
   }
 
   Future<void> initializeHistoryView(List<ImageModel> imageList) async {
     _allImages = imageList;
-    debugPrint('✅ 이미지 개수: ${imageList.length}');
-
-    // 🎵 Player 열기
-    if (!_player.isOpen()) {
-      await _player.openPlayer();
-      debugPrint('🎵 플레이어가 열렸습니다');
-    }
 
     final dir = await getApplicationDocumentsDirectory();
     final files = dir.listSync().whereType<File>().toList();
     _allRecordings = files
         .map((f) => f.path.split('/').last)
         .where((name) => name.endsWith('.aac'))
-        .toList();
-
-    debugPrint('✅ 녹음 파일 목록: $_allRecordings');
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
 
     _extractCategories(imageList);
     _filterByCategory();
   }
 
-  Future<void> deleteHistoryItem(String fileName) async {
-    try {
-      //final dir = await getApplicationDocumentsDirectory();
-      final fullPath = '\${dir.path}/\$fileName';
-      final file = File(fullPath);
-      if (await file.exists()) {
-        await file.delete();
-        _groupedRecordings[_selectedImageGroup]?.remove(fileName);
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('❌ 파일 삭제 오류: \$e');
-    }
-  }
-
-  Future<void> playRecording(String fileName) async {
-    try {
-
-
-      final dir = await getApplicationDocumentsDirectory();
-      final fullPath = '${dir.path}/$fileName';
-      debugPrint("history playRecording fullPath : $fullPath");
-      //
-      // final status = await Permission.storage.request();
-      // if (!status.isGranted) {
-      //   debugPrint('❌ 권한이 없습니다!');
-      //   return;
-      // }
-      //
-      if (_player.isPlaying) {
-        await _player.stopPlayer();
-        _isPlaying = false;
-      } else {
-        await _player.startPlayer(
-          fromURI: fullPath,
-          whenFinished: () {
-            _isPlaying = false;
-            notifyListeners();
-          },
-        );
-        _isPlaying = true;
-      }
-      notifyListeners();
-    } catch (e) {
-      debugPrint('❌ 재생 오류: $e');
-    }
+  void setSelectedImageGroup(String value) {
+    selectedImageGroup = value;
+    notifyListeners();
   }
 
   void setSelectedCategory(String category) {
-    if (_selectedCategory != category) {
-      _selectedCategory = category;
-      _filterByCategory();
-      notifyListeners();
-    }
-  }
-
-  void _filterByCategory() {
-    final filteredImages =
-        _allImages
-            .where(
-              (img) =>
-                  _selectedCategory == '전체' ||
-                  (img.category != null && img.category == _selectedCategory),
-            )
-            .toList();
-    _buildGroupedRecordings(filteredImages);
+    selectedCategory = category;
+    _filterByCategory();
+    notifyListeners();
   }
 
   void _extractCategories(List<ImageModel> images) {
@@ -138,23 +74,24 @@ class HistoryReadingProvider extends ChangeNotifier {
       final imageIdStr = parts[0];
       final imageId = int.tryParse(imageIdStr);
       final image = images.firstWhere(
-        (img) => img.id == imageId,
-        orElse: () {
-          debugPrint('❌ 매칭 실패 imageId: $imageId');
-          return ImageModel(id: 0, name: '', path: '', description: '');
-        },
+            (img) => img.id == imageId,
+        orElse: () => ImageModel(id: 0, name: '', path: '', description: ''),
       );
 
-      if (image.id != 0 &&
-          image.category != null &&
-          image.category!.isNotEmpty) {
+      if (image.id != 0 && image.category?.isNotEmpty == true) {
         categorySet.add(image.category!);
-        debugPrint('📦 카테고리 추가됨: ${image.category!}');
       }
     }
 
-    _categories = categorySet.toList();
-    debugPrint('✅ 최종 카테고리 목록: $_categories');
+    categories = categorySet.toList();
+  }
+
+  void _filterByCategory() {
+    final filteredImages = _allImages.where((img) {
+      return selectedCategory == '전체' || img.category == selectedCategory;
+    }).toList();
+
+    _buildGroupedRecordings(filteredImages);
   }
 
   void _buildGroupedRecordings(List<ImageModel> images) {
@@ -165,37 +102,109 @@ class HistoryReadingProvider extends ChangeNotifier {
       final imageIdStr = image.id.toString();
       final imageName = image.name;
 
-      final matchingFiles =
-          _allRecordings.where((file) {
-            final parts = file.split('_');
-            if (parts.length < 3) return false;
-            final result = parts[0] == imageIdStr;
-            debugPrint('🧩 매칭 체크: file=$file, imageId=$imageIdStr → $result');
-            return result;
-          }).toList();
+      final matchingFiles = _allRecordings.where((file) {
+        final parts = file.split('_');
+        return parts.length >= 3 && parts[0] == imageIdStr;
+      }).toList();
 
       if (matchingFiles.isNotEmpty) {
         newGrouped[imageName] = matchingFiles;
         newMap[imageName] = image;
-        debugPrint('✅ $imageName 에 녹음 ${matchingFiles.length}개');
       }
     }
 
-    _groupedRecordings = newGrouped;
-    _imageModelMap = newMap;
+    groupedRecordings = newGrouped;
+    imageModelMap = newMap;
 
-    debugPrint('📦 groupedRecordings keys: ${_groupedRecordings.keys}');
-    if (_groupedRecordings.isNotEmpty) {
-      _selectedImageGroup = _groupedRecordings.keys.first;
+    if (groupedRecordings.isNotEmpty) {
+      selectedImageGroup = groupedRecordings.keys.first;
     } else {
-      _selectedImageGroup = '';
-      debugPrint('⚠️ groupedRecordings 비어있음');
+      selectedImageGroup = '';
     }
+  }
+
+  Future<void> playRecording(String fileName) async {
+    _positionSubscription?.cancel();
+    _positionSubscription = _audioPlayer.positionStream.listen((pos) {
+      notifyListeners();
+    });
+
+    final dir = await getApplicationDocumentsDirectory();
+    final fullPath = '${dir.path}/$fileName';
+
+    if (_isPlaying && _currentFile == fileName) {
+      if (_isPaused) {
+        _isPaused = false;
+        _isPlaying = true;
+        notifyListeners();
+        await _audioPlayer.play();
+      } else {
+        _pausedPosition = await _audioPlayer.position;
+        _isPaused = true;
+        notifyListeners();
+        await _audioPlayer.pause();
+      }
+      return;
+    }
+
+    await _audioPlayer.stop();
+    _isPlaying = false;
+    _isPaused = false;
+    notifyListeners();
+
+    await _audioPlayer.setFilePath(fullPath);
+    _currentFile = fileName;
+    _isPlaying = true;
+    _isPaused = false;
+    notifyListeners();
+
+    await _audioPlayer.play();
+
+    _playerStateSubscription?.cancel();
+    _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _isPlaying = false;
+        _isPaused = false;
+        _currentFile = null;
+        notifyListeners();
+      }
+    });
+  }
+
+  Future<void> stopPlayback() async {
+    await _audioPlayer.stop();
+    await _audioPlayer.seek(Duration.zero); // 프로그레스바 맨 앞으로 이동
+
+    _isPlaying = false;
+    _isPaused = false;
+    _currentFile = null;
+    _pausedPosition = Duration.zero;
+
+    notifyListeners(); // UI 업데이트
+  }
+
+
+  Future<void> seekTo(Duration position) async {
+    await _audioPlayer.seek(position);
+  }
+
+  Future<void> deleteHistoryItem(String fileName) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final fullPath = '${dir.path}/$fileName';
+    final file = File(fullPath);
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    groupedRecordings[selectedImageGroup]?.remove(fileName);
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    _player.closePlayer();
+    _positionSubscription?.cancel();
+    _playerStateSubscription?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 }

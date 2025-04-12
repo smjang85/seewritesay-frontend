@@ -1,5 +1,4 @@
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
-import 'package:SeeWriteSay/widgets/common_appbar.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -37,11 +36,14 @@ class WritingScreenContent extends StatelessWidget {
         provider.cleanedCorrection == provider.textController.text.trim();
 
     return Scaffold(
-      appBar: CommonAppBar(
-        title: "작문 연습 (${provider.feedbackRemainingText})",
-        onLeadingTap: () {
-          NavigationHelpers.goToPictureScreen(context);
-        },
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            NavigationHelpers.goToPictureScreen(context);
+          },
+        ),
+        title: Text("작문 연습 (${provider.feedbackRemainingText})"),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -49,6 +51,8 @@ class WritingScreenContent extends StatelessWidget {
           ),
         ],
       ),
+
+
       body: Stack(
         children: [
           SingleChildScrollView(
