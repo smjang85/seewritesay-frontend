@@ -1,11 +1,6 @@
-// 수정된 ReadingScreen (스크린쪽 전체)
-
 import 'package:SeeWriteSay/models/image_model.dart';
-import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
-import 'package:SeeWriteSay/style/text_styles.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:SeeWriteSay/providers/reading/reading_provider.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
@@ -68,10 +63,11 @@ class ReadingContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<ReadingProvider>();
     final isFromWriting = provider.sentence.isNotEmpty;
-    final isFromPicture =
-        provider.imageModel != null &&
-            provider.imageModel!.path.isNotEmpty &&
-            provider.sentence.isEmpty;
+    final isFromPicture = provider.imageModel != null &&
+        provider.imageModel!.path.isNotEmpty &&
+        provider.sentence.isEmpty;
+
+    final isPlayable = provider.currentFilePath.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -104,41 +100,34 @@ class ReadingContent extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (isFromPicture) ...[
+            if (isFromPicture)
               CommonImageViewer(
                 imagePath: provider.imageModel!.path,
                 height: 200,
                 borderRadius: 12,
               ),
+            if (isFromWriting) ...[
               const SizedBox(height: 8),
-            ] else if (isFromWriting) ...[
               const Text(
                 "작문 완료한 문장입니다",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
-              Center(
-                child: Text(
-                  '"${provider.sentence}"',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+              Text(
+                '"${provider.sentence}"',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18),
               ),
-              const SizedBox(height: 8),
             ],
 
+            const SizedBox(height: 20),
+
+            /// 🎤 읽기 시작 / 중지
             ElevatedButton.icon(
-              onPressed:
-              provider.isRecording ? provider.stopRecording : provider.startRecording,
+              onPressed: provider.isRecording
+                  ? provider.stopRecording
+                  : provider.startRecording,
               icon: Icon(provider.isRecording ? Icons.stop : Icons.mic),
               label: Text(provider.isRecording ? "중지" : "읽기 시작"),
               style: ElevatedButton.styleFrom(
@@ -146,34 +135,73 @@ class ReadingContent extends StatelessWidget {
                 foregroundColor: Colors.white,
               ),
             ),
-            const SizedBox(height: 10),
 
-            ElevatedButton.icon(
-              onPressed: provider.isRecording || provider.currentFilePath.isEmpty
-                  ? null
-                  : () => provider.playMyVoiceRecording(provider.currentFilePath),
-              icon: Icon(
-                provider.isPlayingMyVoice ? Icons.stop : Icons.play_arrow,
-              ),
-              label: Text(provider.isPlayingMyVoice ? "정지" : "내 음성 듣기"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.indigo,
-              ),
-            ),
+            const SizedBox(height: 16),
 
-            if (provider.duration.inMilliseconds > 0) ...[
-              Slider(
-                value: provider.position.inMilliseconds / provider.duration.inMilliseconds,
-                onChanged: (value) => provider.seekTo(
-                  Duration(
-                    milliseconds: (provider.duration.inMilliseconds * value).toInt(),
+            /// 🔊 재생 + 정지 버튼 (항상 노출)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    final filePath = provider.currentFilePath;
+                    if (!provider.isPlayingFile(filePath)) {
+                      await provider.playMyVoiceRecording(filePath);
+                    } else if (!provider.isPausedFile(filePath)) {
+                      await provider.playMyVoiceRecording(filePath); // 일시정지
+                    } else {
+                      await provider.playMyVoiceRecording(filePath); // 재개
+                    }
+                  },
+                  child: Text(
+                    provider.isPlayingFile(provider.currentFilePath)
+                        ? '일시 정지'
+                        : '재생',
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 20),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: isPlayable &&
+                      provider.isPlayingFile(provider.currentFilePath)
+                      ? () => provider.stopMyVoicePlayback()
+                      : null,
+                  child: const Icon(Icons.stop),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.white,
+                    shape: const CircleBorder(),
+                    padding: const EdgeInsets.all(12),
+                  ),
+                ),
+              ],
+            ),
 
+            const SizedBox(height: 8),
+
+            /// 🎚️ 프로그레스 바 (항상 노출, 단 비활성화)
+            Slider(
+              value: provider.position.inMilliseconds
+                  .clamp(0, provider.duration.inMilliseconds.toDouble())
+                  .toDouble(),
+              max: provider.duration.inMilliseconds.toDouble().clamp(
+                  1, double.infinity),
+              onChanged: isPlayable
+                  ? (value) {
+                provider.seekTo(Duration(milliseconds: value.toInt()));
+              }
+                  : null,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_formatTime(provider.position),
+                    style: const TextStyle(fontSize: 12)),
+                Text(_formatTime(provider.duration),
+                    style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+
+            const SizedBox(height: 20),
             if (provider.showResult) Text(provider.feedback),
             const SizedBox(height: 20),
 
@@ -189,5 +217,11 @@ class ReadingContent extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatTime(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }

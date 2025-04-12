@@ -1,5 +1,5 @@
+
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:just_audio/just_audio.dart';
@@ -9,95 +9,93 @@ import 'package:string_similarity/string_similarity.dart';
 import 'package:SeeWriteSay/models/image_model.dart';
 
 class ReadingProvider extends ChangeNotifier {
-  // 기본 상태값
   String sentence = '';
   ImageModel? imageModel;
 
   bool _isRecording = false;
-  bool get isRecording => _isRecording;
-
-  bool get isPlayingMyVoice => _myVoicePlayer.playing;
-  bool get isPlayingHistory => _historyPlayer.playing;
-
   String currentFilePath = '';
-  String? currentlyPlayingHistory;
-
-  List<String> recordedPaths = [];
-
   Duration position = Duration.zero;
   Duration duration = Duration.zero;
   Duration _pausedPosition = Duration.zero;
 
-  // 도구들
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  final AudioPlayer _myVoicePlayer = AudioPlayer();
-  final AudioPlayer _historyPlayer = AudioPlayer();
-  StreamSubscription<Duration>? _positionSubscription;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  StreamSubscription<Duration>? _positionSub;
 
   bool showResult = false;
   double accuracy = 0.0;
   String feedback = '';
 
-  // 초기화
+  String? _currentFile;
+  bool _isPlaying = false;
+  bool _isPaused = false;
+
+  /// 초기화
   Future<void> initialize(String sentence, {ImageModel? imageModel}) async {
     this.sentence = sentence;
     this.imageModel = imageModel;
 
     await _recorder.openRecorder();
-    await _myVoicePlayer.setLoopMode(LoopMode.off);
-    await _historyPlayer.setLoopMode(LoopMode.off);
+    await _audioPlayer.setLoopMode(LoopMode.off);
 
-    final dir = await getApplicationDocumentsDirectory();
-    final files = dir
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith(".aac"))
-        .toList();
+    _positionSub = _audioPlayer.positionStream.listen((pos) {
+      position = pos;
+      duration = _audioPlayer.duration ?? Duration.zero;
+      notifyListeners();
+    });
 
-    final imageId = imageModel?.id.toString() ?? '';
-    final imageName = imageModel?.name.replaceAll(RegExp(r'\.\w+$'), '') ?? '';
-
-    recordedPaths = files
-        .map((f) => f.path.split('/').last.replaceAll('.aac', ''))
-        .where((name) => name.startsWith('${imageId}_${imageName}_'))
-        .toList();
+    _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _isPlaying = false;
+        _isPaused = false;
+        _currentFile = null;
+        position = Duration.zero;
+        notifyListeners();
+      }
+    });
 
     notifyListeners();
   }
 
-  String _twoDigits(int n) => n.toString().padLeft(2, '0');
-
-  // 녹음 시작
+  /// 녹음 시작
   Future<void> startRecording() async {
     final status = await Permission.microphone.request();
     if (!status.isGranted) return;
 
+    // 🔁 재생 상태 초기화
+
+    _isPlaying = false;
+    _isPaused = false;
+    position = Duration.zero;
+    duration = Duration.zero;
+    _pausedPosition = Duration.zero;
+    currentFilePath = '';
     _isRecording = true;
     notifyListeners();
 
+    await _audioPlayer.stop();
+
     final dir = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
-    final formatted = '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_${_twoDigits(now.hour)}${_twoDigits(now.minute)}${_twoDigits(now.second)}';
-    final fileName = '${imageModel?.id}_${imageModel?.name.split('.').first}_$formatted';
+    final fileName =
+        '${imageModel?.id}_${imageModel?.name.split('.').first}_${_formatDateTime(now)}';
 
     currentFilePath = '${dir.path}/$fileName.aac';
-
     await _recorder.startRecorder(toFile: currentFilePath);
   }
 
-  // 녹음 종료
+
+  /// 녹음 종료
   Future<void> stopRecording() async {
     await _recorder.stopRecorder();
     _isRecording = false;
-
-    final fileName = currentFilePath.split('/').last.replaceAll('.aac', '');
-    _updateHistory(fileName);
-
     showResult = true;
     notifyListeners();
   }
 
-  // 음성 피드백 평가
+  bool get isRecording => _isRecording;
+
+  /// 피드백
   void evaluateRecording(String inputText) {
     final similarity = sentence.similarityTo(inputText);
     accuracy = similarity;
@@ -109,96 +107,72 @@ class ReadingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 내 음성 듣기
-  Future<void> playMyVoiceRecording(String filePath) async {
-    await _myVoicePlayer.stop();
-    await _myVoicePlayer.setFilePath(filePath);
-    await _myVoicePlayer.play();
-    notifyListeners();
-  }
+  bool isPlayingFile(String filePath) =>
+      _isPlaying && !_isPaused && _currentFile == filePath;
 
-  // 히스토리 재생
-  Future<void> playHistoryRecording(String filePath) async {
-    if (currentlyPlayingHistory == filePath && _historyPlayer.playing) {
-      await pauseHistoryRecording();
+  bool isPausedFile(String filePath) =>
+      _isPaused && _currentFile == filePath;
+
+  Future<void> playMyVoiceRecording(String filePath) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final fullPath =
+    filePath.contains(dir.path) ? filePath : '${dir.path}/$filePath';
+
+    if (_isPlaying && _currentFile == filePath) {
+      if (_isPaused) {
+        _isPaused = false;
+        _isPlaying = true;
+        notifyListeners();
+        await _audioPlayer.play();
+      } else {
+        _pausedPosition = await _audioPlayer.position;
+        _isPaused = true;
+        notifyListeners();
+        await _audioPlayer.pause();
+      }
       return;
     }
 
-    if (currentlyPlayingHistory != filePath) {
-      await stopHistoryRecording();
-      await _historyPlayer.setFilePath(filePath);
-    }
+    await _audioPlayer.stop();
+    _isPlaying = false;
+    _isPaused = false;
+    notifyListeners();
 
-    currentlyPlayingHistory = filePath;
-    await _historyPlayer.play();
+    await _audioPlayer.setFilePath(fullPath);
+    _currentFile = filePath;
+    _isPlaying = true;
+    _isPaused = false;
+    notifyListeners();
 
-    _positionSubscription?.cancel();
-    _positionSubscription = _historyPlayer.positionStream.listen((pos) {
-      position = pos;
-      duration = _historyPlayer.duration ?? Duration.zero;
-      notifyListeners();
-    });
+    await _audioPlayer.play();
+  }
 
+  Future<void> stopMyVoicePlayback() async {
+    await _audioPlayer.stop();
+    _isPlaying = false;
+    _isPaused = false;
+    position = Duration.zero;
+    _currentFile = null;
     notifyListeners();
   }
 
-  Future<void> pauseHistoryRecording() async {
-    _pausedPosition = position;
-    await _historyPlayer.pause();
-    notifyListeners();
-  }
-
-  Future<void> resumeHistoryRecording() async {
-    if (currentlyPlayingHistory == null) return;
-    await _historyPlayer.seek(_pausedPosition);
-    await _historyPlayer.play();
-    notifyListeners();
-  }
-
-  Future<void> stopHistoryRecording() async {
-    await _historyPlayer.stop();
-    currentlyPlayingHistory = null;
-    _pausedPosition = Duration.zero;
-    notifyListeners();
-  }
-
-  // 재생 여부 확인
-  bool isPlayingHistoryFile(String fileName) =>
-      _historyPlayer.playing && (currentlyPlayingHistory?.contains(fileName) ?? false);
-
-  // 프로그레스바 시크
-  void seekTo(Duration value) async {
-    await _myVoicePlayer.seek(value);
-  }
-
-  // 히스토리 삭제
-  Future<void> deleteHistoryItem(String fileName) async {
-    recordedPaths.remove(fileName);
-    notifyListeners();
-
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$fileName.aac');
-    if (await file.exists()) {
-      await file.delete();
+  Future<void> seekTo(Duration value) async {
+    if (duration > Duration.zero) {
+      await _audioPlayer.seek(value);
     }
   }
 
-  // 최신 히스토리 추가
-  void _updateHistory(String fileName) {
-    recordedPaths.insert(0, fileName);
-    if (recordedPaths.length > 2) {
-      recordedPaths.removeLast();
-    }
-    notifyListeners();
+  String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+  String _formatDateTime(DateTime now) {
+    return '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_${_twoDigits(now.hour)}${_twoDigits(now.minute)}${_twoDigits(now.second)}';
   }
 
-  // 해제
   @override
   void dispose() {
     _recorder.closeRecorder();
-    _myVoicePlayer.dispose();
-    _historyPlayer.dispose();
-    _positionSubscription?.cancel();
+    _audioPlayer.dispose();
+    _positionSub?.cancel();
     super.dispose();
   }
 }

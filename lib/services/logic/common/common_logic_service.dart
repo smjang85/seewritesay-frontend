@@ -208,7 +208,7 @@ class CommonLogicService {
       return DateFormat('yyyy-MM-dd HH:mm:ss').format(dt);
     } catch (e) {
       debugPrint('📛 시간 포맷 실패: $e');
-      return isoString ?? '';
+      return isoString;
     }
   }
 }
