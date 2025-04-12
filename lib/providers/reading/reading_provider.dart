@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -29,6 +30,16 @@ class ReadingProvider extends ChangeNotifier {
   String? _currentFile;
   bool _isPlaying = false;
   bool _isPaused = false;
+
+
+  final FlutterTts _flutterTts = FlutterTts();
+
+  Future<void> speakSentence() async {
+    if (sentence.isEmpty) return;
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setPitch(1.0);
+    await _flutterTts.speak(sentence);
+  }
 
   /// 초기화
   Future<void> initialize(String sentence, {ImageModel? imageModel}) async {

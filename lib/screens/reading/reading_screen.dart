@@ -124,16 +124,29 @@ class ReadingContent extends StatelessWidget {
             const SizedBox(height: 20),
 
             /// 🎤 읽기 시작 / 중지
-            ElevatedButton.icon(
-              onPressed: provider.isRecording
-                  ? provider.stopRecording
-                  : provider.startRecording,
-              icon: Icon(provider.isRecording ? Icons.stop : Icons.mic),
-              label: Text(provider.isRecording ? "중지" : "읽기 시작"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (provider.sentence.isNotEmpty)
+                  ElevatedButton.icon(
+                    onPressed: () => provider.speakSentence(),
+                    icon: const Icon(Icons.volume_up),
+                    label: const Text("미리 들어보기"),
+                  ),
+                const SizedBox(width: 12),
+
+                ElevatedButton.icon(
+                  onPressed: provider.isRecording
+                      ? provider.stopRecording
+                      : provider.startRecording,
+                  icon: Icon(provider.isRecording ? Icons.stop : Icons.mic),
+                  label: Text(provider.isRecording ? "중지" : "읽기 시작"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 16),
