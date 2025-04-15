@@ -8,10 +8,13 @@ class CommonLogicService {
   static Future<SharedPreferences> prefs() => SharedPreferences.getInstance();
 
   // 🔑 JWT 토큰 가져오기
-  static Future<String?> getToken() async {
+  static Future<String> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     final jwtToken = prefs.getString('jwt_token');
-    if (jwtToken == null) throw Exception("❌ JWT 토큰 없음. 로그인 필요");
+
+    if (jwtToken == null || jwtToken.isEmpty) {
+      throw Exception("❌ JWT 토큰 없음 또는 비어 있음. 다시 로그인해주세요.");
+    }
 
     debugPrint("getToken jwt_token : $jwtToken");
     return jwtToken;

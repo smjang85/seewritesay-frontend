@@ -1,7 +1,8 @@
-
 import 'dart:async';
+import 'dart:io';
 import 'package:SeeWriteSay/constants/constants.dart';
 import 'package:SeeWriteSay/dto/image_dto.dart';
+import 'package:SeeWriteSay/services/api/feedback/user_feedback_api_service.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/utils/dialog_popup_helper.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +12,6 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:string_similarity/string_similarity.dart';
-import 'dart:io';
 
 class ReadingProvider extends ChangeNotifier {
   String sentence = '';
@@ -35,6 +35,13 @@ class ReadingProvider extends ChangeNotifier {
   bool _isPlaying = false;
   bool _isPaused = false;
 
+  int _feedbackReadingRemainingCount = -1;
+
+  String get feedbackReadingRemainingCount {
+    if (_feedbackReadingRemainingCount == -1) return '조회중';
+    if (_feedbackReadingRemainingCount == 0) return '오늘은 모두 사용했어요';
+    return '$_feedbackReadingRemainingCount회 남음';
+  }
 
   final FlutterTts _flutterTts = FlutterTts();
 
@@ -46,7 +53,7 @@ class ReadingProvider extends ChangeNotifier {
   }
 
   /// 초기화
-  Future<void> initialize(String sentence, {ImageDto? imageDto}) async {
+  Future<void> initialize(BuildContext context, String sentence, {ImageDto? imageDto}) async {
     this.sentence = sentence;
     this.imageDto = imageDto;
 
@@ -69,6 +76,11 @@ class ReadingProvider extends ChangeNotifier {
       }
     });
 
+    if (imageDto?.id != null) {
+      final counts = await UserFeedbackApiService.fetchRemainingCounts(imageDto!.id);
+      _feedbackReadingRemainingCount = counts.readingRemainingCount;
+    }
+
     notifyListeners();
   }
 
@@ -85,7 +97,6 @@ class ReadingProvider extends ChangeNotifier {
         '${imageDto?.id}_${imageDto?.name.split('.').first}_${_formatDateTime(now)}';
     final newFilePath = '${dir.path}/$fileName.aac';
 
-    // ✅ 기존 같은 이미지 파일들 정리
     final files = dir
         .listSync()
         .whereType<File>()
@@ -95,7 +106,6 @@ class ReadingProvider extends ChangeNotifier {
         f.path.contains('${imageDto!.id}_'))
         .toList();
 
-    // 오래된 순 정렬 후 2개 초과 시 삭제
     if (files.length >= Constants.readingRecordLength) {
       files.sort((a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()));
       final toDelete = files.sublist(0, files.length - 1);
@@ -104,7 +114,6 @@ class ReadingProvider extends ChangeNotifier {
       }
     }
 
-    // 🔁 재생 상태 초기화
     _isPlaying = false;
     _isPaused = false;
     position = Duration.zero;
@@ -117,9 +126,6 @@ class ReadingProvider extends ChangeNotifier {
     await _recorder.startRecorder(toFile: currentFilePath);
   }
 
-
-
-  /// 녹음 종료
   Future<void> stopRecording() async {
     if (!_isRecording) return;
     await _recorder.stopRecorder();
@@ -130,7 +136,6 @@ class ReadingProvider extends ChangeNotifier {
 
   bool get isRecording => _isRecording;
 
-  /// 피드백
   void evaluateRecording(String inputText) {
     final similarity = sentence.similarityTo(inputText);
     accuracy = similarity;
@@ -201,17 +206,33 @@ class ReadingProvider extends ChangeNotifier {
     if (currentFilePath.isEmpty) return;
 
     try {
+      final imageId = imageDto?.id;
+      if (imageId == null) {
+        CommonLogicService.showSnackBarWithDuration(context, "❌ 이미지 정보가 없습니다.");
+        return;
+      }
+
+      final remaining = (await UserFeedbackApiService.fetchRemainingCounts(imageId)).readingRemainingCount;
+      if (remaining <= 0) {
+        CommonLogicService.showSnackBarWithDuration(context, "📛 피드백 횟수를 모두 사용하였습니다.");
+        return;
+      }
+
       await DialogPopupHelper.evaluatePronunciationDialog(
         context: context,
         filePath: currentFilePath,
+        imageId: imageId,
+        sentence: sentence,
       );
+
+      await UserFeedbackApiService.decreaseReadingFeedbackCount(context, imageId);
+      _feedbackReadingRemainingCount--;
       notifyListeners();
     } catch (e) {
       debugPrint("❌ 발음 평가 실패: $e");
       CommonLogicService.showErrorSnackBar(context, e);
     }
   }
-
 
   String _twoDigits(int n) => n.toString().padLeft(2, '0');
 

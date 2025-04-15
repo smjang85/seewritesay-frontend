@@ -17,7 +17,7 @@ class WritingScreen extends StatelessWidget {
       create:
           (_) =>
               WritingProvider(imageDto, initialSentence: initialSentence)
-                ..initialize(),
+                ..initialize(context),
 
       child: const WritingScreenContent(),
     );
@@ -44,7 +44,17 @@ class WritingScreenContent extends StatelessWidget {
             NavigationHelpers.goToPictureScreen(context);
           },
         ),
-        title: Text("작문 연습 (${provider.feedbackRemainingText})"),
+        title: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: '작문 연습'),
+              TextSpan(
+                text: '(${provider.feedbackWritingRemainingCount})',
+                style: const TextStyle(fontSize: 15, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),

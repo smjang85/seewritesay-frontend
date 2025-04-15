@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:SeeWriteSay/providers/user/user_profile_provider.dart';
-import 'package:SeeWriteSay/services/api/user/user_api_service.dart';
 
 class UserProfileScreen extends StatelessWidget {
   const UserProfileScreen({Key? key}) : super(key: key);

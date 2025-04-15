@@ -27,6 +27,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     Future.microtask(() async {
       await _provider.initialize(
+        context,
         widget.sentence ?? '',
         imageDto: widget.imageDto,
       );
@@ -46,10 +47,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return ChangeNotifierProvider.value(
       value: _provider,
       child: const ReadingContent(),
@@ -88,7 +85,17 @@ class ReadingContent extends StatelessWidget {
             }
           },
         ),
-        title: const Text("읽기 연습"),
+        title: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: '읽기 연습'),
+              TextSpan(
+                text: '(${provider.feedbackReadingRemainingCount})',
+                style: const TextStyle(fontSize: 15, color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),

@@ -52,16 +52,7 @@ class LoginScreenContent extends StatelessWidget {
                 ),
                 onPressed: () => provider.loginWithGoogle(context),
               ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: provider.isLoading
-                    ? null
-                    : () => provider.loginAsGuest(context),
-                child: const Text(
-                  '비로그인으로 체험하기',
-                  style: TextStyle(fontSize: 16),
-                ),
-              ),
+
             ],
           ),
         ),

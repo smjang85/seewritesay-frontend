@@ -44,9 +44,6 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
 
     return ChangeNotifierProvider.value(
       value: _provider,

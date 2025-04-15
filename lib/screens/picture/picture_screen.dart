@@ -1,4 +1,5 @@
 import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
+import 'package:SeeWriteSay/providers/user/user_profile_provider.dart';
 import 'package:SeeWriteSay/services/logic/common/session_manager.dart';
 import 'package:SeeWriteSay/widgets/app_exit_scope.dart';
 import 'package:SeeWriteSay/widgets/common_dropdown.dart';
@@ -36,6 +37,8 @@ class _PictureScreenState extends State<PictureScreen> {
 
     final sessionManager = context.read<SessionManager>();
     sessionManager.startSessionTimer(context);
+
+    context.read<UserProfileProvider>().initializeProfile();
 
     try {
       final profile = await UserApiService.getCurrentUserProfile();

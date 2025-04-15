@@ -43,13 +43,15 @@ class DialogPopupHelper {
   static Future<void> evaluatePronunciationDialog({
     required BuildContext context,
     required String filePath,
+    required int imageId,
+    String? sentence
   }) async {
     final confettiController = ConfettiController(
       duration: const Duration(seconds: 2),
     );
 
     try {
-      final data = await AiFeedbackApiService.fetchAIReadingFeedback(filePath);
+      final data = await AiFeedbackApiService.fetchAIReadingFeedback(context, filePath, imageId, sentence);
       final feedback = AiReadingFeedbackResponseDto.fromJson(data);
 
       // 평균 점수 계산
@@ -245,36 +247,49 @@ class DialogPopupHelper {
 
   static void showErrorDialog(BuildContext context, Object error) {
     String raw = error.toString().replaceAll('Exception: ', '');
-    String msg = raw;
+    String msg = '알 수 없는 오류가 발생했습니다.';
+
+    // 디버깅용 로그 출력
+    debugPrint("❌ 오류 상세: $raw");
 
     try {
-      final jsonStart = raw.indexOf('{');
-      if (jsonStart != -1) {
-        final jsonPart = raw.substring(jsonStart);
-        final decoded = jsonDecode(jsonPart);
-        if (decoded is Map<String, dynamic>) {
-          msg = decoded['message'] ?? decoded['errorCode'] ?? raw;
+      // 401 인증 오류 메시지 커스텀 처리
+      if (raw.contains("status code of 401")) {
+        msg = '🔐 로그인 인증이 만료되었거나 잘못되었습니다.\n다시 로그인해주세요.';
+      } else if (raw.contains("Connection timed out") || raw.contains("SocketException")) {
+        msg = '⏱️ 서버에 연결할 수 없습니다.\n인터넷 연결을 확인해주세요.';
+      } else {
+        final jsonStart = raw.indexOf('{');
+        if (jsonStart != -1) {
+          final jsonPart = raw.substring(jsonStart);
+          final decoded = jsonDecode(jsonPart);
+          if (decoded is Map<String, dynamic>) {
+            msg = decoded['message'] ?? decoded['errorCode'] ?? raw;
+          }
+        } else {
+          msg = raw;
         }
       }
     } catch (_) {
+      // JSON 파싱 실패 시 기존 메시지 유지
       msg = raw;
     }
 
     showDialog(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("⚠️ 오류 발생"),
-            content: Text(msg),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text("확인"),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text("⚠️ 오류 발생"),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("확인"),
           ),
+        ],
+      ),
     );
   }
+
 
   static Future<void> showCountdownBlockingDialog({
     required BuildContext context,
@@ -334,5 +349,15 @@ class DialogPopupHelper {
     ).then((_) {
       if (timer.isActive) timer.cancel();
     });
+  }
+
+
+  /// 공통 로딩 다이얼로그
+  static void showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
   }
 }

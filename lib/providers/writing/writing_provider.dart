@@ -25,21 +25,20 @@ class WritingProvider extends ChangeNotifier {
   bool isLoading = false;
   bool hasReceivedFeedback = false;
 
-  int remainingFeedback = 999;
+  int _writingRemainingCount = -1;
   final int maxLength = 300;
 
-  String get cleanedCorrection =>
-      WritingLogicService.cleanCorrection(correctedText);
+  String get cleanedCorrection => WritingLogicService.cleanCorrection(correctedText);
 
   final focusNode = FocusNode();
 
-  String get feedbackRemainingText {
-    if (remainingFeedback >= 999) return '조회중';
-    if (remainingFeedback <= 0) return '오늘은 모두 사용했어요';
-    return '$remainingFeedback회 남음';
+  String get feedbackWritingRemainingCount {
+    if (_writingRemainingCount == -1) return '조회중';
+    if (_writingRemainingCount == 0) return '오늘은 모두 사용했어요';
+    return '$_writingRemainingCount회 남음';
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize(BuildContext context) async {
     debugPrint("initialSentence : $initialSentence");
     isTextEditable = true;
     if (initialSentence != null) {
@@ -50,7 +49,7 @@ class WritingProvider extends ChangeNotifier {
 
     notifyListeners();
 
-    await _loadFeedbackLimit();
+    await _loadFeedbackLimit(context);
     textController.addListener(_onInputChanged);
   }
 
@@ -64,11 +63,11 @@ class WritingProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadFeedbackLimit() async {
+  Future<void> _loadFeedbackLimit(BuildContext context) async {
     try {
       final imageId = (imageDto?.id is int) ? imageDto!.id : 0;
-      final count = await UserFeedbackApiService.fetchRemainingCount(imageId);
-      remainingFeedback = count;
+      final counts = await UserFeedbackApiService.fetchRemainingCounts(imageId);
+      _writingRemainingCount = counts.writingRemainingCount;
       notifyListeners();
     } catch (e) {
       debugPrint("❌ 피드백 횟수 조회 실패: $e");
@@ -97,7 +96,7 @@ class WritingProvider extends ChangeNotifier {
     final userText = textController.text.trim();
     if (userText.isEmpty || userText.length > maxLength) return;
 
-    if (remainingFeedback <= 0) {
+    if (_writingRemainingCount <= 0) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("⚠️ 피드백 횟수를 모두 사용했어요.")));
@@ -124,18 +123,15 @@ class WritingProvider extends ChangeNotifier {
 
     try {
       final imageId = (imageDto?.id is int) ? imageDto!.id : 0;
-      final result = await AiFeedbackApiService.fetchAIWriteFeedback(
-        userText,
-        imageId,
-      );
-      await UserFeedbackApiService.decreaseFeedbackCount(imageId);
+      final result = await AiFeedbackApiService.fetchAIWriteFeedback(context, userText, imageId,);
+      await UserFeedbackApiService.decreaseWritingFeedbackCount(context, imageId);
 
       correctedText = result['correction'] ?? '';
       feedback = result['feedback'] ?? '';
       grade = result['grade'] ?? '';
       feedbackShown = true;
       hasReceivedFeedback = true;
-      remainingFeedback--;
+      _writingRemainingCount--;
     } catch (e) {
       debugPrint("❌ GPT 오류 발생: $e");
       CommonLogicService.showErrorSnackBar(context, e);
@@ -185,9 +181,9 @@ class WritingProvider extends ChangeNotifier {
     final currentSentence = textController.text.trim();
     debugPrint("goToReading currentSentence $currentSentence");
     NavigationHelpers.goToReadingScreen(
-      context,
-      sentence: currentSentence,
-      imageDto: imageDto!
+        context,
+        sentence: currentSentence,
+        imageDto: imageDto!
     );
   }
 

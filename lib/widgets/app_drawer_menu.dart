@@ -1,5 +1,4 @@
 import 'package:SeeWriteSay/providers/user/user_profile_provider.dart';
-import 'package:SeeWriteSay/services/api/user/user_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:provider/provider.dart';
