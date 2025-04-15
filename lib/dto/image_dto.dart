@@ -1,4 +1,4 @@
-class ImageModel {
+class ImageDto {
   final int id;
   final String name;
   final String path;
@@ -7,7 +7,7 @@ class ImageModel {
 
   String? get categoryName => category;
 
-  ImageModel({
+  ImageDto({
     required this.id,
     required this.name,
     required this.path,
@@ -15,8 +15,8 @@ class ImageModel {
     this.description,
   });
 
-  factory ImageModel.fromJson(Map<String, dynamic> json) {
-    return ImageModel(
+  factory ImageDto.fromJson(Map<String, dynamic> json) {
+    return ImageDto(
       id: json['id'],
       name: json['name'],
       path: json['path'],

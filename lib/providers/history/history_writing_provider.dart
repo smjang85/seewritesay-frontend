@@ -1,5 +1,5 @@
+import 'package:SeeWriteSay/dto/history_writing_response_dto.dart';
 import 'package:flutter/material.dart';
-import 'package:SeeWriteSay/models/history_writing_model.dart';
 import 'package:SeeWriteSay/services/api/history/history_writing_api_service.dart';
 
 class HistoryWritingProvider extends ChangeNotifier {
@@ -10,13 +10,13 @@ class HistoryWritingProvider extends ChangeNotifier {
   final int? imageId;
 
   /// 전체 히스토리 데이터 (카테고리 필터링 전)
-  List<HistoryWritingModel> _allHistory = [];
+  List<HistoryWritingResponseDto> _allHistory = [];
 
   /// 현재 필터링된 히스토리 목록
-  List<HistoryWritingModel> _filteredHistory = [];
+  List<HistoryWritingResponseDto> _filteredHistory = [];
 
   /// 외부 노출용 히스토리 getter
-  List<HistoryWritingModel> get history => _filteredHistory;
+  List<HistoryWritingResponseDto> get history => _filteredHistory;
 
   /// 카테고리 관련
   List<String> _categories = ['전체'];
@@ -81,7 +81,7 @@ class HistoryWritingProvider extends ChangeNotifier {
         imageId: imageId,
       );
       _filteredHistory =
-          loaded.map((e) => HistoryWritingModel.fromJson(e)).toList()..sort(
+          loaded.map((e) => HistoryWritingResponseDto.fromJson(e)).toList()..sort(
             (a, b) => (b.createdAt ?? DateTime(1970)).compareTo(
               a.createdAt ?? DateTime(1970),
             ),

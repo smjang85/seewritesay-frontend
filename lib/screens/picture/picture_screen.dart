@@ -1,4 +1,5 @@
 import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
+import 'package:SeeWriteSay/services/logic/common/session_manager.dart';
 import 'package:SeeWriteSay/widgets/app_exit_scope.dart';
 import 'package:SeeWriteSay/widgets/common_dropdown.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
@@ -8,6 +9,7 @@ import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:SeeWriteSay/widgets/app_drawer_menu.dart';
 import 'package:SeeWriteSay/providers/picture/picture_provider.dart';
 import 'package:SeeWriteSay/providers/login/login_provider.dart';
+import 'package:SeeWriteSay/services/api/user/user_api_service.dart';
 
 class PictureScreen extends StatefulWidget {
   @override
@@ -15,23 +17,35 @@ class PictureScreen extends StatefulWidget {
 }
 
 class _PictureScreenState extends State<PictureScreen> {
+  String? nickname;
+  String? avatar;
+
   @override
   void initState() {
     super.initState();
+    _initScreen();
+  }
 
-    // 비동기 초기화 로직을 별도 함수로 분리
-    Future.microtask(() async {
-      final provider = Provider.of<PictureProvider>(context, listen: false);
-      final imageListProvider = Provider.of<ImageListProvider>(
-        context,
-        listen: false,
-      );
+  Future<void> _initScreen() async {
+    final provider = Provider.of<PictureProvider>(context, listen: false);
+    final imageListProvider = Provider.of<ImageListProvider>(context, listen: false);
 
-      await provider.fetchImages();
-      imageListProvider.setImages(provider.images);
+    await provider.fetchImages();
+    imageListProvider.setImages(provider.images);
+    await provider.loadUsedImages();
 
-      await provider.loadUsedImages();
-    });
+    final sessionManager = context.read<SessionManager>();
+    sessionManager.startSessionTimer(context);
+
+    try {
+      final profile = await UserApiService.getCurrentUserProfile();
+      setState(() {
+        nickname = profile.nickname;
+        avatar = profile.avatar != null ? '${profile.avatar}' : null;
+      });
+    } catch (e) {
+      debugPrint('❌ 사용자 프로필 조회 실패: $e');
+    }
   }
 
   @override
@@ -41,48 +55,55 @@ class _PictureScreenState extends State<PictureScreen> {
     final image = provider.selectedImage;
     final alreadyUsed = provider.isAlreadyUsed;
 
-    final hasImages = provider.images.isNotEmpty;
-
     return AppExitScope(
       child: Scaffold(
         backgroundColor: const Color(0xFFF9F8F3),
-
         appBar: AppBar(
-          title: Row(
-            children: [SizedBox(width: 8), Text("See Write Say")],
-          ),
+          title: Row(children: [SizedBox(width: 8), Text("See Write Say")]),
         ),
-
         drawer: AppDrawerMenu(
           isLoggedIn: isLoggedIn,
+          nickname: nickname,
+          avatar: avatar,
           onLogout: () {
             context.read<LoginProvider>().logout(context);
           },
         ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
-          child:
-              hasImages
-                  ? Column(
-                    children: [
-                      Text(
-                        "이 장면을 보고 영어로 이야기해보세요",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      SizedBox(height: 20),
-                      Expanded(
-                        child: _buildImageSection(image, alreadyUsed, provider),
-                      ),
-                      SizedBox(height: 20),
-                      _buildActionButtons(image, provider),
-                    ],
-                  )
-                  : Center(
-                    child: Text(
-                      "조회된 이미지가 없습니다.",
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            await provider.fetchImages();
+            context.read<ImageListProvider>().setImages(provider.images);
+            await provider.loadUsedImages();
+          },
+          child: provider.images.isNotEmpty
+              ? ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
+            children: [
+              const Text(
+                "이 장면을 보고 영어로 이야기해보세요",
+                style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 380,
+                child: _buildImageSection(image, alreadyUsed, provider),
+              ),
+              const SizedBox(height: 20),
+              _buildActionButtons(image, provider),
+            ],
+          )
+              : ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: const [
+              SizedBox(height: 200),
+              Center(
+                child: Text(
+                  "조회된 이미지가 없습니다.",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -91,11 +112,11 @@ class _PictureScreenState extends State<PictureScreen> {
   Widget _buildImageSection(image, bool alreadyUsed, PictureProvider provider) {
     return image != null
         ? CommonImageViewer(
-          imagePath: image.path,
-          showCheck: alreadyUsed,
-          height: 380, // 크게!
-          borderRadius: 16, // 더 둥글게 하고 싶으면 늘려도 됨
-        )
+      imagePath: image.path,
+      showCheck: alreadyUsed,
+      height: 380,
+      borderRadius: 16,
+    )
         : const Center(child: Icon(Icons.image_not_supported));
   }
 
@@ -106,7 +127,6 @@ class _PictureScreenState extends State<PictureScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // 🔁 다른 그림 아이콘 버튼 (중앙 정렬)
         Center(
           child: IconButton(
             onPressed: provider.loadNextImage,
@@ -114,9 +134,7 @@ class _PictureScreenState extends State<PictureScreen> {
             tooltip: "다른 그림 보기",
           ),
         ),
-
-        const SizedBox(height: 8), // 새로고침 버튼 아래 간격도 줄임
-        // 🎯 유형 선택 드롭다운 (이미지 폭과 맞춤)
+        const SizedBox(height: 8),
         SizedBox(
           width: 380,
           child: CommonDropdown(
@@ -130,10 +148,7 @@ class _PictureScreenState extends State<PictureScreen> {
             },
           ),
         ),
-
         const SizedBox(height: 20),
-
-        // 📝 작문 & 리딩 버튼 한 줄 정렬, 폭 맞춤
         if (provider.imageLoadSuccess)
           SizedBox(
             width: 380,
@@ -161,7 +176,7 @@ class _PictureScreenState extends State<PictureScreen> {
                     if (provider.selectedImage != null) {
                       NavigationHelpers.goToReadingScreen(
                         context,
-                        imageModel: provider.selectedImage!,
+                        imageDto: provider.selectedImage!,
                       );
                     }
                   },
@@ -175,7 +190,6 @@ class _PictureScreenState extends State<PictureScreen> {
               ],
             ),
           ),
-
         const SizedBox(height: 20),
       ],
     );

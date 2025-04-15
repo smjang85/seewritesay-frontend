@@ -20,9 +20,9 @@ class UserFeedbackApiService {
       final Map<String, dynamic> json = jsonDecode(response.body);
       debugPrint("✅ json: $json");
 
-      final int count = json['data']['remainingCount'];
+      final int writingRemainingCount = json['data']['writingRemainingCount'];
 
-      return count;
+      return writingRemainingCount;
     } else {
       throw Exception("❌ 피드백 횟수 조회 실패: ${response.statusCode} ${response.body}");
     }
@@ -34,7 +34,7 @@ class UserFeedbackApiService {
     if (token == null) throw Exception("❌ JWT 토큰 없음");
 
     final response = await http.post(
-      Uri.parse('${ApiConstants.userFeedbackUrl}/decrement'),
+      Uri.parse(ApiConstants.userFeedbackWritingDecrementUrl),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',

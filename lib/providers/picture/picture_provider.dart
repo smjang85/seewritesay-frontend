@@ -1,19 +1,19 @@
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:flutter/material.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/services/api/image/image_api_service.dart';
 import 'package:SeeWriteSay/services/logic/picture/picture_logic_service.dart';
 
 class PictureProvider extends ChangeNotifier {
-  List<ImageModel> _images = [];
+  List<ImageDto> _images = [];
   final Set<String> _usedImagePaths = {};
-  ImageModel? _selectedImage;
+  ImageDto? _selectedImage;
   bool _imageLoadSuccess = true;
 
   List<String> _categories = ['전체'];
   String _selectedCategory = '전체';
 
-  List<ImageModel> get images => _images;
-  ImageModel? get selectedImage => _selectedImage;
+  List<ImageDto> get images => _images;
+  ImageDto? get selectedImage => _selectedImage;
   bool get imageLoadSuccess => _imageLoadSuccess;
 
   List<String> get categories => _categories;
@@ -24,23 +24,16 @@ class PictureProvider extends ChangeNotifier {
 
   Future<void> fetchImages() async {
     try {
-      final images = await ImageApiService.fetchAllImages();
-      _images = images;
+      _images = await ImageApiService.fetchAllImages();
       _extractCategories();
       loadNextImage();
       notifyListeners();
-
-      //final imageListProvider = Provider.of<ImageListProvider>(context, listen: false);
-      //imageListProvider.setImages(_images);
-
     } catch (e) {
       debugPrint("❌ 이미지 불러오기 실패: $e");
+      _imageLoadSuccess = false;
+      notifyListeners();
     }
   }
-
-
-
-
 
   Future<void> loadUsedImages() async {
     final used = await PictureLogicService.loadUsedImagePaths();
@@ -64,15 +57,11 @@ class PictureProvider extends ChangeNotifier {
       return;
     }
 
-    if (_selectedImage == null || !filteredImages.contains(_selectedImage)) {
-      _selectedImage = filteredImages.first;
-      _imageLoadSuccess = true;
-      notifyListeners();
-      return;
-    }
+    final currentIndex = _selectedImage == null
+        ? -1
+        : filteredImages.indexWhere((img) => img.id == _selectedImage!.id);
 
     final total = filteredImages.length;
-    final currentIndex = filteredImages.indexWhere((img) => img.id == _selectedImage!.id);
 
     // 1. 히스토리가 없는 이미지 우선 선택
     for (int offset = 1; offset <= total; offset++) {
@@ -87,15 +76,16 @@ class PictureProvider extends ChangeNotifier {
     }
 
     // 2. 모두 히스토리가 있을 경우 순차적으로
-    final fallbackIndex = (currentIndex + 1) % total;
-    _selectedImage = filteredImages[fallbackIndex];
+    _selectedImage = filteredImages[(currentIndex + 1) % total];
     _imageLoadSuccess = true;
     notifyListeners();
   }
 
   void setImageLoadSuccess(bool success) {
-    _imageLoadSuccess = success;
-    notifyListeners();
+    if (_imageLoadSuccess != success) {
+      _imageLoadSuccess = success;
+      notifyListeners();
+    }
   }
 
   void setSelectedCategory(String category) {
@@ -107,22 +97,19 @@ class PictureProvider extends ChangeNotifier {
   }
 
   void _extractCategories() {
-    final categorySet = {'전체'};
+    final categorySet = <String>{'전체'};
 
     for (var image in _images) {
-      debugPrint("_extractCategories image categoryName: ${image.categoryName}");
-      debugPrint("_extractCategories image description: ${image.description}");
-
-      if (image.categoryName != null && image.categoryName!.isNotEmpty) {
-        categorySet.add(image.categoryName!);
+      final category = image.categoryName;
+      if (category != null && category.isNotEmpty) {
+        categorySet.add(category);
       }
     }
     _categories = categorySet.toList();
   }
 
   Future<void> fetchCategoriesFromHistory(List<String> serverCategories) async {
-    final categorySet = {'전체', ...serverCategories};
-    _categories = categorySet.toList();
+    _categories = ['전체', ...serverCategories.toSet()].toList();
     notifyListeners();
   }
 }

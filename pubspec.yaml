@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  confetti: ^0.8.0
+  dio: ^5.8.0+1
   intl: ^0.20.2
   cached_network_image: ^3.4.1
   google_sign_in: ^6.3.0
@@ -57,6 +59,7 @@ flutter_native_splash:
 
 flutter:
   assets:
+    - assets/avatars/
     - assets/images/
     - assets/icons/app_icon.png
     - .env.prod

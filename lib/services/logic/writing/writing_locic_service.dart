@@ -3,11 +3,13 @@ import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 import 'package:SeeWriteSay/services/api/history/history_writing_api_service.dart';
 
 class WritingLogicService {
-  static Future<void> saveHistory(String sentence, int imageId) async {
+  static Future<void> saveHistory(String sentence, String grade,
+      int imageId) async {
     try {
       await HistoryWritingApiService.saveHistory(
         imageId: imageId,
         sentence: sentence,
+        grade: grade,
       );
     } catch (e) {
       debugPrint("❌ 서버 저장 실패: $e");
@@ -17,7 +19,8 @@ class WritingLogicService {
   static Future<bool> hasHistory({int? imageId}) async {
     debugPrint('hasHistory imageId : $imageId');
     try {
-      final list = await HistoryWritingApiService.fetchHistory(imageId: imageId);
+      final list = await HistoryWritingApiService.fetchHistory(
+          imageId: imageId);
       return list.isNotEmpty;
     } catch (e) {
       debugPrint("❌ 서버 히스토리 확인 실패: $e");
@@ -36,28 +39,38 @@ class WritingLogicService {
 
   static Future<bool> confirmOverwriteDialog(BuildContext context) async {
     CommonLogicService.dismissKeyboard(context);
-    return await showDialog<bool>(
+    final shouldSave = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("기록을 저장할까요?"),
-        content: Text("이전 작성 내용은 덮어쓰여요. 계속 진행할까요?"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context, false);
-              CommonLogicService.dismissKeyboard(context);
-            },
-            child: Text("취소"),
+      builder: (context) =>
+          AlertDialog(
+            title: Text("기록을 저장할까요?"),
+            content: Text("이전 작성 내용은 덮어쓰여요. 계속 진행할까요?"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context, false);
+                  CommonLogicService.dismissKeyboard(context);
+                },
+                child: Text("취소"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  CommonLogicService.dismissKeyboard(context);
+                  Navigator.pop(context, true);
+                },
+                child: Text("저장하기"),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context, true);
-            },
-            child: Text("저장하기"),
-          ),
-        ],
-      ),
-    ) ??
-        false;
+    );
+    CommonLogicService.dismissKeyboard(context);
+
+    if(shouldSave == true){
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("작문 기록이 저장되었습니다.")));
+    }
+
+    return shouldSave ?? false;
   }
 }

@@ -1,5 +1,9 @@
 
 import 'dart:async';
+import 'package:SeeWriteSay/constants/constants.dart';
+import 'package:SeeWriteSay/dto/image_dto.dart';
+import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
+import 'package:SeeWriteSay/utils/dialog_popup_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -7,11 +11,11 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:string_similarity/string_similarity.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
+import 'dart:io';
 
 class ReadingProvider extends ChangeNotifier {
   String sentence = '';
-  ImageModel? imageModel;
+  ImageDto? imageDto;
 
   bool _isRecording = false;
   String currentFilePath = '';
@@ -42,9 +46,9 @@ class ReadingProvider extends ChangeNotifier {
   }
 
   /// 초기화
-  Future<void> initialize(String sentence, {ImageModel? imageModel}) async {
+  Future<void> initialize(String sentence, {ImageDto? imageDto}) async {
     this.sentence = sentence;
-    this.imageModel = imageModel;
+    this.imageDto = imageDto;
 
     await _recorder.openRecorder();
     await _audioPlayer.setLoopMode(LoopMode.off);
@@ -73,31 +77,51 @@ class ReadingProvider extends ChangeNotifier {
     final status = await Permission.microphone.request();
     if (!status.isGranted) return;
 
-    // 🔁 재생 상태 초기화
-
-    _isPlaying = false;
-    _isPaused = false;
-    position = Duration.zero;
-    duration = Duration.zero;
-    _pausedPosition = Duration.zero;
-    currentFilePath = '';
-    _isRecording = true;
-    notifyListeners();
-
     await _audioPlayer.stop();
 
     final dir = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
     final fileName =
-        '${imageModel?.id}_${imageModel?.name.split('.').first}_${_formatDateTime(now)}';
+        '${imageDto?.id}_${imageDto?.name.split('.').first}_${_formatDateTime(now)}';
+    final newFilePath = '${dir.path}/$fileName.aac';
 
-    currentFilePath = '${dir.path}/$fileName.aac';
+    // ✅ 기존 같은 이미지 파일들 정리
+    final files = dir
+        .listSync()
+        .whereType<File>()
+        .where((f) =>
+    f.path.endsWith('.aac') &&
+        imageDto != null &&
+        f.path.contains('${imageDto!.id}_'))
+        .toList();
+
+    // 오래된 순 정렬 후 2개 초과 시 삭제
+    if (files.length >= Constants.readingRecordLength) {
+      files.sort((a, b) => a.lastModifiedSync().compareTo(b.lastModifiedSync()));
+      final toDelete = files.sublist(0, files.length - 1);
+      for (var file in toDelete) {
+        await file.delete();
+      }
+    }
+
+    // 🔁 재생 상태 초기화
+    _isPlaying = false;
+    _isPaused = false;
+    position = Duration.zero;
+    duration = Duration.zero;
+    _pausedPosition = Duration.zero;
+    currentFilePath = newFilePath;
+    _isRecording = true;
+    notifyListeners();
+
     await _recorder.startRecorder(toFile: currentFilePath);
   }
 
 
+
   /// 녹음 종료
   Future<void> stopRecording() async {
+    if (!_isRecording) return;
     await _recorder.stopRecorder();
     _isRecording = false;
     showResult = true;
@@ -173,10 +197,30 @@ class ReadingProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> evaluatePronunciation(BuildContext context) async {
+    if (currentFilePath.isEmpty) return;
+
+    try {
+      await DialogPopupHelper.evaluatePronunciationDialog(
+        context: context,
+        filePath: currentFilePath,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint("❌ 발음 평가 실패: $e");
+      CommonLogicService.showErrorSnackBar(context, e);
+    }
+  }
+
+
   String _twoDigits(int n) => n.toString().padLeft(2, '0');
 
   String _formatDateTime(DateTime now) {
     return '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_${_twoDigits(now.hour)}${_twoDigits(now.minute)}${_twoDigits(now.second)}';
+  }
+
+  bool get isPlayable {
+    return currentFilePath.isNotEmpty && File(currentFilePath).existsSync();
   }
 
   @override

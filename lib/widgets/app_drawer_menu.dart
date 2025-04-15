@@ -1,29 +1,41 @@
+import 'package:SeeWriteSay/providers/user/user_profile_provider.dart';
+import 'package:SeeWriteSay/services/api/user/user_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
+import 'package:provider/provider.dart';
 
 class AppDrawerMenu extends StatelessWidget {
   final bool isLoggedIn;
+  final String? nickname;
+  final String? avatar;
   final VoidCallback? onLogout;
 
   const AppDrawerMenu({
     Key? key,
     required this.isLoggedIn,
+    this.nickname,
+    this.avatar,
     this.onLogout,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    context.read<UserProfileProvider>().initializeProfile();
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          _buildHeader(),
+          _buildHeader(context),// 👤 상단 사용자 정보
           ListTile(
             leading: Icon(Icons.edit_note),
             title: Text("진행한 작문"),
             onTap: () {
               Navigator.pop(context);
-              NavigationHelpers.goToHistoryWritingScreen(context, withCategory: true);
+              NavigationHelpers.goToHistoryWritingScreen(
+                context,
+                withCategory: true,
+              );
             },
           ),
           ListTile(
@@ -45,28 +57,52 @@ class AppDrawerMenu extends StatelessWidget {
             leading: Icon(Icons.login),
             title: Text("로그인"),
             onTap: () {
-              Navigator.of(context).pop(); // 예시로 닫기만
+              Navigator.of(context).pop();
             },
           ),
         ],
       ),
     );
   }
+  Widget _buildHeader(BuildContext context) {
+    return Consumer<UserProfileProvider>(
+      builder: (context, provider, child) {
+        final avatarPath = provider.selectedAvatar ?? '';
+        final nickname = provider.nicknameController.text.isNotEmpty
+            ? provider.nicknameController.text
+            : '사용자';
 
-  Widget _buildHeader() {
-    return DrawerHeader(
-      decoration: BoxDecoration(color: Colors.indigo),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.account_circle, color: Colors.white, size: 48),
-          SizedBox(height: 8),
-          Text(
-            isLoggedIn ? "로그인됨" : "로그인이 필요해요",
-            style: TextStyle(color: Colors.white, fontSize: 18),
+        return DrawerHeader(
+          decoration: const BoxDecoration(color: Colors.indigo),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              NavigationHelpers.pushToProfileSetupScreen(context);
+            },
+            child: Row(
+              children: [
+                avatarPath.isNotEmpty
+                    ? ClipOval(
+                  child: Image.asset(avatarPath, width: 64, height: 64, fit: BoxFit.cover),
+                )
+                    : const Icon(Icons.account_circle, color: Colors.white, size: 64),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    nickname,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+
+
 }

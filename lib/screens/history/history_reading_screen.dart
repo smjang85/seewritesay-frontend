@@ -71,7 +71,7 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
                 children: [
                   Icon(Icons.edit_note),
                   SizedBox(width: 8),
-                  Text("녹음 히스토리"),
+                  Text("이전 녹음내역"),
                 ],
               ),
             ),
@@ -106,18 +106,18 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
   Widget _buildGroupedList(HistoryReadingProvider provider) {
     final selected = provider.selectedImageGroup;
     final files = provider.groupedRecordings[selected] ?? [];
-    final imageModel = provider.imageModelMap[selected];
+    final imageDto = provider.imageDtoMap[selected];
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        if (imageModel != null)
+        if (imageDto != null)
           Row(
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: CachedNetworkImage(
-                  imageUrl: '${ApiConstants.baseUrl}${imageModel.path}',
+                  imageUrl: '${ApiConstants.baseUrl}${imageDto.path}',
                   width: 60,
                   height: 60,
                   fit: BoxFit.cover,
@@ -126,9 +126,9 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  imageModel.description?.isNotEmpty == true
-                      ? imageModel.description!
-                      : imageModel.name,
+                  imageDto.description?.isNotEmpty == true
+                      ? imageDto.description!
+                      : imageDto.name,
                   style: const TextStyle(fontSize: 14, color: Colors.black87),
                   softWrap: true,
                   overflow: TextOverflow.visible,

@@ -1,19 +1,19 @@
 import 'dart:convert';
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:SeeWriteSay/constants/api_constants.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 
 class ImageApiService {
   // 서버에서 이미지 리스트 전체를 가져옴
-  static Future<List<ImageModel>> fetchAllImages() async {
+  static Future<List<ImageDto>> fetchAllImages() async {
     final response = await http.get(Uri.parse(ApiConstants.imagesUrl));
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> json = jsonDecode(response.body);
       final List<dynamic> data = json['data']; // 'data' 키 안의 리스트 추출
       debugPrint("fetchAllImages data : $data");
-      return data.map((e) => ImageModel.fromJson(e)).toList();
+      return data.map((e) => ImageDto.fromJson(e)).toList();
     } else {
       throw Exception('이미지 목록 불러오기 실패');
     }

@@ -1,11 +1,11 @@
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 
 class NavigationHelpers {
   static void goToWritingScreen(
       BuildContext context,
-      ImageModel image, {
+      ImageDto image, {
         String? sentence,
       }) {
     context.pushNamed( // ✅ pushNamed → goNamed
@@ -57,15 +57,15 @@ class NavigationHelpers {
   static void goToReadingScreen(
       BuildContext context, {
         String? sentence,
-        required ImageModel imageModel,
+        required ImageDto imageDto,
       }) {
-    debugPrint("goToReadingScreen - imageModel : $imageModel , sentence : $sentence");
+    debugPrint("goToReadingScreen - imageDto : $imageDto , sentence : $sentence");
 
     context.pushNamed( // ✅ pushNamed → goNamed
       'reading',
       extra: {
         'sentence': sentence?.trim(),
-        'imageModel': imageModel,
+        'imageDto': imageDto,
       },
     );
   }
@@ -77,5 +77,11 @@ class NavigationHelpers {
     context.pop(result);
   }
 
+  static void goToProfileSetupScreen(BuildContext context) {
+    context.goNamed('profileSetup');
+  }
 
+  static void pushToProfileSetupScreen(BuildContext context) {
+    context.pushNamed('profileSetup', queryParameters: {'fromDrawer': 'true'});
+  }
 }

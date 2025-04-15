@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:SeeWriteSay/models/image_model.dart';
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:SeeWriteSay/services/logic/common/common_logic_service.dart';
 
 class PictureLogicService {
@@ -13,7 +13,7 @@ class PictureLogicService {
         .toSet();
   }
 
-  static ImageModel pickRandomImage(List<ImageModel> all, Set<String> used) {
+  static ImageDto pickRandomImage(List<ImageDto> all, Set<String> used) {
     if (all.isEmpty) throw Exception("이미지 없음");
 
     final unused = all.where((img) => !used.contains(img.path)).toList();

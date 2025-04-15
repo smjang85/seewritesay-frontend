@@ -1,7 +1,7 @@
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:SeeWriteSay/widgets/common_dropdown.dart';
 import 'package:SeeWriteSay/widgets/common_empty_message.dart';
 import 'package:flutter/material.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:SeeWriteSay/constants/api_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -48,7 +48,7 @@ class HistoryWritingContent extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          children: [Icon(Icons.edit_note), SizedBox(width: 8), Text("진행한 작문")],
+          children: [Icon(Icons.edit_note), SizedBox(width: 8), Text("이전 작문내역")],
         ),
       ),
 
@@ -208,7 +208,7 @@ class HistoryWritingContent extends StatelessWidget {
                                       Navigator.pop(context);
                                       NavigationHelpers.goToWritingScreen(
                                         context,
-                                        ImageModel(
+                                        ImageDto(
                                           id: entry.imageId,
                                           path: entry.imagePath,
                                           name: entry.imageName,

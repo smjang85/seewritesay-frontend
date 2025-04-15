@@ -1,22 +1,22 @@
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/providers/writing/writing_provider.dart';
 
 class WritingScreen extends StatelessWidget {
-  final ImageModel? imageModel;
+  final ImageDto? imageDto;
   final String? initialSentence;
 
-  const WritingScreen({super.key, this.imageModel, this.initialSentence});
+  const WritingScreen({super.key, this.imageDto, this.initialSentence});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create:
           (_) =>
-              WritingProvider(imageModel, initialSentence: initialSentence)
+              WritingProvider(imageDto, initialSentence: initialSentence)
                 ..initialize(),
 
       child: const WritingScreenContent(),
@@ -30,6 +30,7 @@ class WritingScreenContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<WritingProvider>();
+
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     final isWellWritten =
@@ -61,9 +62,9 @@ class WritingScreenContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (provider.imageModel != null) ...[
+                if (provider.imageDto != null) ...[
                   CommonImageViewer(
-                    imagePath: provider.imageModel!.path,
+                    imagePath: provider.imageDto!.path,
                     height: 200,
                     borderRadius: 16,
                   ),
@@ -71,6 +72,8 @@ class WritingScreenContent extends StatelessWidget {
                 ],
                 TextField(
                   controller: provider.textController,
+                  focusNode: provider.focusNode,
+                  autofocus: false,
                   maxLength: provider.maxLength,
                   maxLines: 5,
                   enabled: provider.isTextEditable,
@@ -178,43 +181,52 @@ class WritingScreenContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment:
-                        isWellWritten
-                            ? MainAxisAlignment.center
-                            : MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       if (!isWellWritten)
                         provider.grade == "F"
                             ? OutlinedButton.icon(
-                              icon: const Icon(Icons.refresh),
-                              label: const Text("다시 작성하기"),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                side: const BorderSide(color: Colors.red),
-                              ),
-                              onPressed: provider.resetFeedback,
-                            )
+                          icon: const Icon(Icons.refresh),
+                          label: const Text("다시 작성하기"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                          ),
+                          onPressed: provider.resetFeedback,
+                        )
                             : OutlinedButton.icon(
-                              icon: const Icon(Icons.edit_note),
-                              label: const Text("피드백 반영"),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.indigo,
-                                side: const BorderSide(color: Colors.indigo),
-                              ),
-                              onPressed:
-                                  () => provider.applyCorrectionWithDialog(
-                                    context,
-                                  ),
-                            ),
+                          icon: const Icon(Icons.edit_note),
+                          label: const Text("Ai 적용 후 읽기 연습하기"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.indigo,
+                            side: const BorderSide(color: Colors.indigo),
+                          ),
+                          onPressed: () => provider.applyCorrectionWithDialog(context),
+                        ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.save),
+                        label: const Text("작문내역 저장"),
+                        onPressed: () {
+                          // 작문 내역 저장 로직
+                          provider.saveHistory(context);
+                        },
+                      ),
                       ElevatedButton(
-                        child: const Text("리딩 연습하기"),
-                        onPressed:
-                            provider.grade == "F"
-                                ? null
-                                : () => provider.goToReading(context),
+                        child: const Text("읽기 연습하기"),
+                        onPressed: provider.grade == "F"
+                            ? null
+                            : () => provider.goToReading(context),
                       ),
                     ],
                   ),
+
+
                 ],
               ],
             ),
@@ -251,7 +263,7 @@ class WritingScreenContent extends StatelessWidget {
 }
 
 class WritingScreenArgs {
-  final ImageModel image;
+  final ImageDto image;
   final String? sentence;
 
   WritingScreenArgs({required this.image, this.sentence});

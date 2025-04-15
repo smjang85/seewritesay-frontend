@@ -1,4 +1,5 @@
-import 'package:SeeWriteSay/models/image_model.dart';
+
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:SeeWriteSay/utils/navigation_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,9 +8,9 @@ import 'package:SeeWriteSay/widgets/common_image_viewer.dart';
 
 class ReadingScreen extends StatefulWidget {
   final String? sentence;
-  final ImageModel? imageModel;
+  final ImageDto? imageDto;
 
-  const ReadingScreen({super.key, this.sentence, this.imageModel});
+  const ReadingScreen({super.key, this.sentence, this.imageDto});
 
   @override
   State<ReadingScreen> createState() => _ReadingScreenState();
@@ -27,7 +28,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     Future.microtask(() async {
       await _provider.initialize(
         widget.sentence ?? '',
-        imageModel: widget.imageModel,
+        imageDto: widget.imageDto,
       );
       if (mounted) {
         setState(() {
@@ -63,8 +64,8 @@ class ReadingContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<ReadingProvider>();
     final isFromWriting = provider.sentence.isNotEmpty;
-    final isFromPicture = provider.imageModel != null &&
-        provider.imageModel!.path.isNotEmpty &&
+    final isFromPicture = provider.imageDto != null &&
+        provider.imageDto!.path.isNotEmpty &&
         provider.sentence.isEmpty;
 
     final isPlayable = provider.currentFilePath.isNotEmpty;
@@ -77,7 +78,7 @@ class ReadingContent extends StatelessWidget {
             if (isFromWriting) {
               NavigationHelpers.goToWritingScreen(
                 context,
-                provider.imageModel!,
+                provider.imageDto!,
                 sentence: provider.sentence,
               );
             } else if (isFromPicture) {
@@ -87,7 +88,7 @@ class ReadingContent extends StatelessWidget {
             }
           },
         ),
-        title: const Text("리딩 연습"),
+        title: const Text("읽기 연습"),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -103,7 +104,7 @@ class ReadingContent extends StatelessWidget {
           children: [
             if (isFromPicture)
               CommonImageViewer(
-                imagePath: provider.imageModel!.path,
+                imagePath: provider.imageDto!.path,
                 height: 200,
                 borderRadius: 12,
               ),
@@ -156,16 +157,18 @@ class ReadingContent extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  onPressed: () async {
+                  onPressed: provider.isPlayable
+                      ? () async {
                     final filePath = provider.currentFilePath;
                     if (!provider.isPlayingFile(filePath)) {
                       await provider.playMyVoiceRecording(filePath);
                     } else if (!provider.isPausedFile(filePath)) {
-                      await provider.playMyVoiceRecording(filePath); // 일시정지
+                      await provider.playMyVoiceRecording(filePath);
                     } else {
-                      await provider.playMyVoiceRecording(filePath); // 재개
+                      await provider.playMyVoiceRecording(filePath);
                     }
-                  },
+                  }
+                      : null,
                   child: Text(
                     provider.isPlayingFile(provider.currentFilePath)
                         ? '일시 정지'
@@ -174,7 +177,7 @@ class ReadingContent extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: isPlayable &&
+                  onPressed: provider.isPlayable &&
                       provider.isPlayingFile(provider.currentFilePath)
                       ? () => provider.stopMyVoicePlayback()
                       : null,
@@ -186,8 +189,25 @@ class ReadingContent extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                   ),
                 ),
+                const SizedBox(width: 8),
+                // ✅ 발음 피드백 받기 버튼
+                ElevatedButton.icon(
+                  onPressed: provider.isPlayable &&
+                      !provider.isPlayingFile(provider.currentFilePath) &&
+                      !provider.isRecording
+                      ? () => provider.evaluatePronunciation(context)
+                      : null,
+                  icon: const Icon(Icons.rate_review),
+                  label: const Text("피드백 받기"),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.indigo,
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.indigo),
+                  ),
+                ),
               ],
             ),
+
 
             const SizedBox(height: 8),
 

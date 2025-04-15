@@ -1,4 +1,4 @@
-import 'package:SeeWriteSay/models/history_writing_model.dart';
+import 'package:SeeWriteSay/dto/history_writing_response_dto.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -33,7 +33,7 @@ class HistoryWritingApiService {
   }
 
 
-  static Future<List<HistoryWritingModel>> fetchHistoryWithCategory() async {
+  static Future<List<HistoryWritingResponseDto>> fetchHistoryWithCategory() async {
     final token = await CommonLogicService.getToken(); // ✅ 토큰 추가
     final url = ApiConstants.historyWritingWithCategoryUrl;
 
@@ -53,7 +53,7 @@ class HistoryWritingApiService {
       final Map<String, dynamic> json = jsonDecode(response.body);
       final List<dynamic> data = json['data']; // 'data' 키 안의 리스트 추출
 
-      return data.map((json) => HistoryWritingModel.fromJson(json)).toList();
+      return data.map((json) => HistoryWritingResponseDto.fromJson(json)).toList();
     } else {
       debugPrint("❌ 응답 코드: ${response.statusCode}");
       debugPrint("❌ 응답 바디: ${response.body}");
@@ -65,15 +65,18 @@ class HistoryWritingApiService {
   static Future<void> saveHistory({
     required int imageId,
     required String sentence,
+    required String grade,
   }) async {
     final token = await CommonLogicService.getToken();
 
     debugPrint('saveHistory imageId $imageId');
     debugPrint('saveHistory sentence $sentence');
+    debugPrint('saveHistory grade $grade');
 
     final body = jsonEncode({
       'imageId': imageId,
       'sentence': sentence,
+      'grade': grade,
     });
 
 

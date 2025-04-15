@@ -46,6 +46,18 @@ class CommonLogicService {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  static void showSnackBarWithDuration(BuildContext context, String message, {int seconds = 1}) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: Duration(seconds: seconds),
+        ),
+      );
+  }
+
+
   static Future<bool> checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('isLoggedIn') ?? false;
@@ -78,39 +90,7 @@ class CommonLogicService {
     }
   }
 
-  /// ❗ 기본 다이얼로그 방식 오류 처리
-  static void showErrorDialog(BuildContext context, Object error) {
-    String raw = error.toString().replaceAll('Exception: ', '');
-    String msg = raw;
 
-    try {
-      final jsonStart = raw.indexOf('{');
-      if (jsonStart != -1) {
-        final jsonPart = raw.substring(jsonStart);
-        final decoded = jsonDecode(jsonPart);
-        if (decoded is Map<String, dynamic>) {
-          msg = decoded['message'] ?? decoded['errorCode'] ?? raw;
-        }
-      }
-    } catch (_) {
-      msg = raw;
-    }
-
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("⚠️ 오류 발생"),
-            content: Text(msg),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text("확인"),
-              ),
-            ],
-          ),
-    );
-  }
 
   /// ✅ SnackBar(토스트) 방식 오류 처리
   static void showErrorSnackBar(BuildContext context, Object error) {
@@ -135,34 +115,7 @@ class CommonLogicService {
     );
   }
 
-  static Future<void> showConfirmAndNavigate({
-    required BuildContext context,
-    required String title,
-    required String content,
-    required VoidCallback onConfirm,
-  }) async {
-    await showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(title),
-            content: Text(content),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("아니요"),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  onConfirm(); // 확인 시 콜백 실행
-                },
-                child: const Text("네"),
-              ),
-            ],
-          ),
-    );
-  }
+
 
   static String extractRecordingTimestamp(String fileName) {
     try {
@@ -211,4 +164,6 @@ class CommonLogicService {
       return isoString;
     }
   }
+
+
 }

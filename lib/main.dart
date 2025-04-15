@@ -1,3 +1,4 @@
+import 'package:SeeWriteSay/providers/user/user_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:SeeWriteSay/router/router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,12 +10,13 @@ import 'package:SeeWriteSay/providers/login/login_provider.dart';
 import 'package:SeeWriteSay/providers/picture/picture_provider.dart';
 import 'package:SeeWriteSay/providers/reading/reading_provider.dart';
 import 'package:SeeWriteSay/providers/history/history_writing_provider.dart';
+import 'package:SeeWriteSay/services/logic/common/session_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
 
-  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'prod');
+  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
   await dotenv.load(fileName: flavor == 'prod' ? '.env.prod' : '.env.dev');
 
   runApp(
@@ -25,6 +27,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => PictureProvider()),
         ChangeNotifierProvider(create: (_) => ReadingProvider()),
         ChangeNotifierProvider(create: (_) => HistoryWritingProvider()),
+        ChangeNotifierProvider(create: (_) => UserProfileProvider()),
+        ChangeNotifierProvider(create: (_) => SessionManager()),
       ],
       child: const SeeWriteSayApp(),
     ),

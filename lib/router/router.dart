@@ -1,4 +1,6 @@
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:SeeWriteSay/screens/history/history_reading_screen.dart';
+import 'package:SeeWriteSay/screens/user/user_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,7 +9,6 @@ import 'package:SeeWriteSay/screens/picture/picture_screen.dart';
 import 'package:SeeWriteSay/screens/reading/reading_screen.dart';
 import 'package:SeeWriteSay/screens/writing/writing_screen.dart';
 import 'package:SeeWriteSay/screens/auth/auth_callback_screen.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 import 'package:SeeWriteSay/screens/history/history_writing_screen.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -18,6 +19,11 @@ final GoRouter appRouter = GoRouter(
       path: '/login',
       name: 'login',
       builder: (context, state) => LoginScreen(),
+    ),
+    GoRoute(
+      path: '/profileSetup',
+      name: 'profileSetup',
+      builder: (context, state) => UserProfileScreen(),
     ),
     GoRoute(
       path: '/picture',
@@ -34,7 +40,7 @@ final GoRouter appRouter = GoRouter(
         final imageDescription = state.uri.queryParameters['imageDescription'] ?? '';
         final sentence = state.uri.queryParameters['sentence']; // ✅ 추가
 
-        final imageModel = ImageModel(
+        final imageDto = ImageDto(
           id: imageId,
           path: imagePath,
           name: imageName,
@@ -42,7 +48,7 @@ final GoRouter appRouter = GoRouter(
         );
 
         return WritingScreen(
-          imageModel: imageModel,
+          imageDto: imageDto,
           initialSentence: sentence, // ✅ 여기도 추가
         );
       },
@@ -53,12 +59,12 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final sentence = extra?['sentence'] as String?;
-        final imageModel = extra?['imageModel'] as ImageModel?;
+        final imageDto = extra?['imageDto'] as ImageDto?;
 
         return MaterialPage(
           child: ReadingScreen(
             sentence: sentence,
-            imageModel: imageModel,
+            imageDto: imageDto,
           ),
         );
       },

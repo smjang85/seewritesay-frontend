@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 
 class HistoryReadingProvider extends ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   Map<String, List<String>> groupedRecordings = {};
-  Map<String, ImageModel> imageModelMap = {};
+  Map<String, ImageDto> imageDtoMap = {};
   String selectedImageGroup = '';
   List<String> _allRecordings = [];
 
-  List<ImageModel> _allImages = [];
+  List<ImageDto> _allImages = [];
   List<String> categories = ['전체'];
   String selectedCategory = '전체';
 
@@ -38,7 +38,7 @@ class HistoryReadingProvider extends ChangeNotifier {
     return _isPaused && _currentFile == fileName;
   }
 
-  Future<void> initializeHistoryView(List<ImageModel> imageList) async {
+  Future<void> initializeHistoryView(List<ImageDto> imageList) async {
     _allImages = imageList;
 
     final dir = await getApplicationDocumentsDirectory();
@@ -64,7 +64,7 @@ class HistoryReadingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _extractCategories(List<ImageModel> images) {
+  void _extractCategories(List<ImageDto> images) {
     final Set<String> categorySet = {'전체'};
 
     for (var fileName in _allRecordings) {
@@ -75,7 +75,7 @@ class HistoryReadingProvider extends ChangeNotifier {
       final imageId = int.tryParse(imageIdStr);
       final image = images.firstWhere(
             (img) => img.id == imageId,
-        orElse: () => ImageModel(id: 0, name: '', path: '', description: ''),
+        orElse: () => ImageDto(id: 0, name: '', path: '', description: ''),
       );
 
       if (image.id != 0 && image.category?.isNotEmpty == true) {
@@ -94,9 +94,9 @@ class HistoryReadingProvider extends ChangeNotifier {
     _buildGroupedRecordings(filteredImages);
   }
 
-  void _buildGroupedRecordings(List<ImageModel> images) {
+  void _buildGroupedRecordings(List<ImageDto> images) {
     final Map<String, List<String>> newGrouped = {};
-    final Map<String, ImageModel> newMap = {};
+    final Map<String, ImageDto> newMap = {};
 
     for (var image in images) {
       final imageIdStr = image.id.toString();
@@ -114,7 +114,7 @@ class HistoryReadingProvider extends ChangeNotifier {
     }
 
     groupedRecordings = newGrouped;
-    imageModelMap = newMap;
+    imageDtoMap = newMap;
 
     if (groupedRecordings.isNotEmpty) {
       selectedImageGroup = groupedRecordings.keys.first;

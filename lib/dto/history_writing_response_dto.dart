@@ -1,4 +1,4 @@
-class HistoryWritingModel {
+class HistoryWritingResponseDto{
   final int id;
   final int imageId;
   final String imagePath;
@@ -9,7 +9,7 @@ class HistoryWritingModel {
   final String categoryName;
   final DateTime? createdAt;
 
-  HistoryWritingModel({
+  HistoryWritingResponseDto({
     required this.id,
     required this.imageId,
     required this.imagePath,
@@ -21,8 +21,8 @@ class HistoryWritingModel {
     this.createdAt,
   });
 
-  factory HistoryWritingModel.fromJson(Map<String, dynamic> json) {
-    return HistoryWritingModel(
+  factory HistoryWritingResponseDto.fromJson(Map<String, dynamic> json) {
+    return HistoryWritingResponseDto(
       id: json['id'] ?? 0,
       imageId: json['imageId'] ?? 0,
       imagePath: json['imagePath'] ?? '',

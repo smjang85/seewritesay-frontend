@@ -1,17 +1,17 @@
+import 'package:SeeWriteSay/dto/image_dto.dart';
 import 'package:flutter/material.dart';
-import 'package:SeeWriteSay/models/image_model.dart';
 
 class ImageListProvider extends ChangeNotifier {
-  List<ImageModel> _images = [];
+  List<ImageDto> _images = [];
 
-  List<ImageModel> get images => _images;
+  List<ImageDto> get images => _images;
 
-  void setImages(List<ImageModel> newList) {
+  void setImages(List<ImageDto> newList) {
     _images = newList;
     notifyListeners();
   }
 
-  ImageModel? findById(int id) {
-    return _images.firstWhere((img) => img.id == id, orElse: () => ImageModel(id: -1, name: '', path: '', description: ''));
+  ImageDto? findById(int id) {
+    return _images.firstWhere((img) => img.id == id, orElse: () => ImageDto(id: -1, name: '', path: '', description: ''));
   }
 }
