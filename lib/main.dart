@@ -1,16 +1,18 @@
-import 'package:SeeWriteSay/providers/user/user_profile_provider.dart';
+import 'package:see_write_say/features/user/providers/user_profile_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:SeeWriteSay/router/router.dart';
+import 'package:see_write_say/core/router/router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
 
-import 'package:SeeWriteSay/providers/image/image_list_provider.dart';
-import 'package:SeeWriteSay/providers/login/login_provider.dart';
-import 'package:SeeWriteSay/providers/picture/picture_provider.dart';
-import 'package:SeeWriteSay/providers/reading/reading_provider.dart';
-import 'package:SeeWriteSay/providers/history/history_writing_provider.dart';
-import 'package:SeeWriteSay/services/logic/common/session_manager.dart';
+import 'package:see_write_say/features/image/providers/image_list_provider.dart';
+import 'package:see_write_say/features/login/providers/login_provider.dart';
+import 'package:see_write_say/features/picture/providers/picture_provider.dart';
+import 'package:see_write_say/features/reading/providers/reading_provider.dart';
+import 'package:see_write_say/features/history/providers/history_writing_provider.dart';
+import 'package:see_write_say/core/logic/session_manager.dart';
+
+import 'package:see_write_say/core/monitor/user_activity_monitor.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +32,9 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => SessionManager()),
       ],
-      child: const SeeWriteSayApp(),
+      child: const UserActivityMonitor(
+        child: SeeWriteSayApp(), // ✅ 감쌌음!
+      ),
     ),
   );
 }
