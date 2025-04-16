@@ -1,17 +1,20 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:see_write_say/features/image/providers/image_list_provider.dart';
+import 'package:see_write_say/features/login/providers/login_provider.dart';
+import 'package:see_write_say/features/picture/providers/picture_provider.dart';
+import 'package:see_write_say/features/user/api/user_api_service.dart';
 import 'package:see_write_say/features/user/providers/user_profile_provider.dart';
+import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
+import 'package:see_write_say/core/presentation/components/app_drawer_menu.dart';
 import 'package:see_write_say/core/presentation/components/app_exit_scope.dart';
 import 'package:see_write_say/core/presentation/components/common_dropdown.dart';
 import 'package:see_write_say/core/presentation/components/common_image_viewer.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
-import 'package:see_write_say/core/presentation/components/app_drawer_menu.dart';
-import 'package:see_write_say/features/picture/providers/picture_provider.dart';
-import 'package:see_write_say/features/login/providers/login_provider.dart';
-import 'package:see_write_say/features/user/api/user_api_service.dart';
+import 'package:see_write_say/core/presentation/theme/text_styles.dart';
 
 class PictureScreen extends StatefulWidget {
+  const PictureScreen({super.key});
+
   @override
   State<PictureScreen> createState() => _PictureScreenState();
 }
@@ -33,7 +36,6 @@ class _PictureScreenState extends State<PictureScreen> {
     await provider.fetchImages();
     imageListProvider.setImages(provider.images);
     await provider.loadUsedImages();
-
 
     context.read<UserProfileProvider>().initializeProfile();
 
@@ -59,15 +61,15 @@ class _PictureScreenState extends State<PictureScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF9F8F3),
         appBar: AppBar(
-          title: Row(children: [SizedBox(width: 8), Text("See Write Say")]),
+          title: const Row(
+            children: [SizedBox(width: 8), Text("See Write Say", style: kHeadingTextStyle)],
+          ),
         ),
         drawer: AppDrawerMenu(
           isLoggedIn: isLoggedIn,
           nickname: nickname,
           avatar: avatar,
-          onLogout: () {
-            context.read<LoginProvider>().logout(context);
-          },
+          onLogout: () => context.read<LoginProvider>().logout(context),
         ),
         body: RefreshIndicator(
           onRefresh: () async {
@@ -79,17 +81,14 @@ class _PictureScreenState extends State<PictureScreen> {
               ? ListView(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
             children: [
-              const Text(
-                "이 장면을 보고 영어로 이야기해보세요",
-                style: TextStyle(fontSize: 18),
-              ),
+              const Text("이 장면을 보고 영어로 이야기해보세요", style: kBodyTextStyle),
               const SizedBox(height: 20),
               SizedBox(
                 height: 380,
-                child: _buildImageSection(image, alreadyUsed, provider),
+                child: _buildImageSection(image, alreadyUsed),
               ),
               const SizedBox(height: 20),
-              _buildActionButtons(image, provider),
+              _buildActionButtons(provider),
             ],
           )
               : ListView(
@@ -99,7 +98,7 @@ class _PictureScreenState extends State<PictureScreen> {
               Center(
                 child: Text(
                   "조회된 이미지가 없습니다.",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: kSubtitleTextStyle,
                 ),
               ),
             ],
@@ -109,7 +108,7 @@ class _PictureScreenState extends State<PictureScreen> {
     );
   }
 
-  Widget _buildImageSection(image, bool alreadyUsed, PictureProvider provider) {
+  Widget _buildImageSection(image, bool alreadyUsed) {
     return image != null
         ? CommonImageViewer(
       imagePath: image.path,
@@ -120,7 +119,7 @@ class _PictureScreenState extends State<PictureScreen> {
         : const Center(child: Icon(Icons.image_not_supported));
   }
 
-  Widget _buildActionButtons(image, PictureProvider provider) {
+  Widget _buildActionButtons(PictureProvider provider) {
     final categories = provider.categories;
     final selectedCategory = provider.selectedCategory;
 

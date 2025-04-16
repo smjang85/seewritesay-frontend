@@ -1,15 +1,14 @@
 import 'package:see_write_say/app/constants/api_constants.dart';
 import 'package:see_write_say/core/helpers/format/format_helper.dart';
-import 'package:see_write_say/features/history/providers/history_reading_provider.dart';
-import 'package:see_write_say/app/style/text_styles.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
 import 'package:see_write_say/core/presentation/components/common_dropdown.dart';
 import 'package:see_write_say/core/presentation/components/common_empty_message.dart';
+import 'package:see_write_say/core/presentation/theme/text_styles.dart';
+import 'package:see_write_say/features/history/providers/history_reading_provider.dart';
+import 'package:see_write_say/features/image/providers/image_list_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import 'package:see_write_say/features/image/providers/image_list_provider.dart';
 
 class HistoryReadingScreen extends StatefulWidget {
   const HistoryReadingScreen({super.key});
@@ -41,7 +40,6 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return ChangeNotifierProvider.value(
       value: _provider,
       child: Consumer<HistoryReadingProvider>(
@@ -61,36 +59,35 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => NavigationHelpers.goToPictureScreen(context),
               ),
-              title: const Row(
-                children: [
-                  Icon(Icons.edit_note),
-                  SizedBox(width: 8),
-                  Text("이전 녹음내역"),
-                ],
+              title: Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(text: '이전 녹음내역', style: kHeadingTextStyle),
+                  ],
+                ),
               ),
             ),
-            body:
-                recordings.isEmpty
-                    ? const CommonEmptyMessage(message: '진행한 녹음이 없습니다.')
-                    : Column(
-                      children: [
-                        CommonDropdown(
-                          label: "카테고리",
-                          value: provider.selectedCategory,
-                          items: provider.categories,
-                          onChanged:
-                              (value) => provider.setSelectedCategory(value!),
-                        ),
-                        CommonDropdown(
-                          label: "이미지",
-                          value: provider.selectedImageGroup,
-                          items: imageNames,
-                          onChanged:
-                              (value) => provider.setSelectedImageGroup(value!),
-                        ),
-                        Expanded(child: _buildGroupedList(provider)),
-                      ],
-                    ),
+            body: recordings.isEmpty
+                ? const CommonEmptyMessage(message: '진행한 녹음이 없습니다.')
+                : Column(
+              children: [
+                CommonDropdown(
+                  label: "카테고리",
+                  value: provider.selectedCategory,
+                  items: provider.categories,
+                  onChanged: (value) =>
+                      provider.setSelectedCategory(value!),
+                ),
+                CommonDropdown(
+                  label: "이미지",
+                  value: provider.selectedImageGroup,
+                  items: imageNames,
+                  onChanged: (value) =>
+                      provider.setSelectedImageGroup(value!),
+                ),
+                Expanded(child: _buildGroupedList(provider)),
+              ],
+            ),
           );
         },
       ),
@@ -123,49 +120,41 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
                   imageDto.description?.isNotEmpty == true
                       ? imageDto.description!
                       : imageDto.name,
-                  style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
+                  style: kSubtitleTextStyle,
                 ),
               ),
             ],
           ),
         const SizedBox(height: 16),
-        // Only show the progress bar and time info if a file is selected and playing
-
-        // 프로그레스 바는 항상 보이고, 선택 후에만 초/시간을 업데이트
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
               Slider(
-                value:
-                    provider.position.inMilliseconds
-                        .clamp(0, provider.duration.inMilliseconds.toDouble())
-                        .toDouble(),
+                value: provider.position.inMilliseconds
+                    .clamp(0, provider.duration.inMilliseconds.toDouble())
+                    .toDouble(),
                 max: provider.duration.inMilliseconds.toDouble(),
                 onChanged: (value) {
                   provider.seekTo(Duration(milliseconds: value.toInt()));
                 },
               ),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 파일이 재생 중일 때만 초와 시간을 표시하도록 조건 추가
                   Text(
                     provider.currentFile != null &&
-                            provider.duration.inMilliseconds > 0
+                        provider.duration.inMilliseconds > 0
                         ? _formatTime(provider.position)
-                        : '00:00', // 재생되지 않으면 00:00을 표시
-                    style: const TextStyle(fontSize: 12),
+                        : '00:00',
+                    style: kTimestampTextStyle,
                   ),
                   Text(
                     provider.currentFile != null &&
-                            provider.duration.inMilliseconds > 0
+                        provider.duration.inMilliseconds > 0
                         ? _formatTime(provider.duration)
-                        : '00:00', // 전체 시간도 동일하게 표시
-                    style: const TextStyle(fontSize: 12),
+                        : '00:00',
+                    style: kTimestampTextStyle,
                   ),
                 ],
               ),
@@ -174,9 +163,8 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
         ),
         const SizedBox(height: 16),
         ...files.map((fileName) {
-          final formattedTime = FormatHelper.extractRecordingTimestamp(
-            fileName,
-          );
+          final formattedTime =
+          FormatHelper.extractRecordingTimestamp(fileName);
 
           return Card(
             margin: const EdgeInsets.symmetric(vertical: 6),
@@ -188,8 +176,8 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
               },
               leading: IconButton(
                 icon: const Icon(Icons.delete, color: Colors.redAccent),
-                onPressed:
-                    () async => await provider.deleteHistoryItem(fileName),
+                onPressed: () async =>
+                await provider.deleteHistoryItem(fileName),
               ),
               title: Text(formattedTime, style: kTimestampTextStyle),
               trailing: Consumer<HistoryReadingProvider>(

@@ -1,10 +1,10 @@
-
-import 'package:see_write_say/features/image/dto/image_dto.dart';
-import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:see_write_say/features/image/dto/image_dto.dart';
 import 'package:see_write_say/features/reading/providers/reading_provider.dart';
+import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
 import 'package:see_write_say/core/presentation/components/common_image_viewer.dart';
+import 'package:see_write_say/core/presentation/theme/text_styles.dart';
 
 class ReadingScreen extends StatefulWidget {
   final String? sentence;
@@ -23,14 +23,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
   void initState() {
     super.initState();
     _provider = ReadingProvider();
-
-    Future.microtask(() async {
-      await _provider.initialize(
-        context,
-        widget.sentence ?? '',
-        imageDto: widget.imageDto,
-      );
-    });
+    Future.microtask(() => _provider.initialize(
+      context,
+      widget.sentence ?? '',
+      imageDto: widget.imageDto,
+    ));
   }
 
   @override
@@ -82,10 +79,10 @@ class ReadingContent extends StatelessWidget {
         title: Text.rich(
           TextSpan(
             children: [
-              const TextSpan(text: '읽기 연습'),
+              const TextSpan(text: '읽기 연습', style: kHeadingTextStyle),
               TextSpan(
-                text: '(${provider.feedbackReadingRemainingCount})',
-                style: const TextStyle(fontSize: 15, color: Colors.grey),
+                text: ' (${provider.feedbackReadingRemainingCount})',
+                style: kSubtitleTextStyle,
               ),
             ],
           ),
@@ -93,10 +90,8 @@ class ReadingContent extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
-            onPressed: () {
-              NavigationHelpers.goToHistoryReadingScreen(context);
-            },
-          )
+            onPressed: () => NavigationHelpers.goToHistoryReadingScreen(context),
+          ),
         ],
       ),
       body: Padding(
@@ -111,32 +106,22 @@ class ReadingContent extends StatelessWidget {
               ),
             if (isFromWriting) ...[
               const SizedBox(height: 8),
-              const Text(
-                "작문 완료한 문장입니다",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              const Text("작문 완료한 문장입니다", style: kBodyTextStyle),
               const SizedBox(height: 6),
-              Text(
-                '"${provider.sentence}"',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18),
-              ),
+              Text('"${provider.sentence}"', textAlign: TextAlign.center, style: kSubtitleTextStyle),
             ],
-
             const SizedBox(height: 20),
 
-            /// 🎤 읽기 시작 / 중지
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (provider.sentence.isNotEmpty)
                   ElevatedButton.icon(
-                    onPressed: () => provider.speakSentence(),
+                    onPressed: provider.speakSentence,
                     icon: const Icon(Icons.volume_up),
                     label: const Text("미리 들어보기"),
                   ),
                 const SizedBox(width: 12),
-
                 ElevatedButton.icon(
                   onPressed: provider.isRecording
                       ? provider.stopRecording
@@ -153,34 +138,21 @@ class ReadingContent extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            /// 🔊 재생 + 정지 버튼 (항상 노출)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
                   onPressed: provider.isPlayable
-                      ? () async {
-                    final filePath = provider.currentFilePath;
-                    if (!provider.isPlayingFile(filePath)) {
-                      await provider.playMyVoiceRecording(filePath);
-                    } else if (!provider.isPausedFile(filePath)) {
-                      await provider.playMyVoiceRecording(filePath);
-                    } else {
-                      await provider.playMyVoiceRecording(filePath);
-                    }
-                  }
+                      ? () => provider.playMyVoiceRecording(provider.currentFilePath)
                       : null,
                   child: Text(
-                    provider.isPlayingFile(provider.currentFilePath)
-                        ? '일시 정지'
-                        : '재생',
+                    provider.isPlayingFile(provider.currentFilePath) ? '일시 정지' : '재생',
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: provider.isPlayable &&
-                      provider.isPlayingFile(provider.currentFilePath)
-                      ? () => provider.stopMyVoicePlayback()
+                  onPressed: provider.isPlayable && provider.isPlayingFile(provider.currentFilePath)
+                      ? provider.stopMyVoicePlayback
                       : null,
                   child: const Icon(Icons.stop),
                   style: ElevatedButton.styleFrom(
@@ -191,7 +163,6 @@ class ReadingContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // ✅ 발음 피드백 받기 버튼
                 ElevatedButton.icon(
                   onPressed: provider.isPlayable &&
                       !provider.isPlayingFile(provider.currentFilePath) &&
@@ -209,34 +180,29 @@ class ReadingContent extends StatelessWidget {
               ],
             ),
 
-
             const SizedBox(height: 8),
 
-            /// 🎚️ 프로그레스 바 (항상 노출, 단 비활성화)
             Slider(
               value: provider.position.inMilliseconds
                   .clamp(0, provider.duration.inMilliseconds.toDouble())
                   .toDouble(),
-              max: provider.duration.inMilliseconds.toDouble().clamp(
-                  1, double.infinity),
+              max: provider.duration.inMilliseconds.toDouble().clamp(1, double.infinity),
               onChanged: isPlayable
-                  ? (value) {
-                provider.seekTo(Duration(milliseconds: value.toInt()));
-              }
+                  ? (value) => provider.seekTo(Duration(milliseconds: value.toInt()))
                   : null,
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(_formatTime(provider.position),
-                    style: const TextStyle(fontSize: 12)),
-                Text(_formatTime(provider.duration),
-                    style: const TextStyle(fontSize: 12)),
+                Text(_formatTime(provider.position), style: kSubtitleTextStyle),
+                Text(_formatTime(provider.duration), style: kSubtitleTextStyle),
               ],
             ),
 
             const SizedBox(height: 20),
-            if (provider.showResult) Text(provider.feedback),
+            if (provider.showResult)
+              Text(provider.feedback, style: kBodyTextStyle),
+
             const SizedBox(height: 20),
 
             ElevatedButton(
