@@ -7,13 +7,15 @@ class CommonImageViewer extends StatelessWidget {
   final bool showCheck;
   final double height;
   final double borderRadius;
+  final BoxFit fit; // ✅ 추가
 
   const CommonImageViewer({
     super.key,
     required this.imagePath,
     this.showCheck = false,
-    this.height = 200, // 기본값: 작문 화면 크기
-    this.borderRadius = 12, // 기본 라운드 정도
+    this.height = 200,
+    this.borderRadius = 12,
+    this.fit = BoxFit.cover, // ✅ 기본값 설정
   });
 
   @override
@@ -26,9 +28,12 @@ class CommonImageViewer extends StatelessWidget {
             child: CachedNetworkImage(
               imageUrl: '${ApiConstants.baseUrl}$imagePath',
               height: height,
-              fit: BoxFit.cover,
-              placeholder: (context, url) =>
-              const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+              width: double.infinity,
+              fit: fit, // ✅ 적용
+              placeholder: (context, url) => SizedBox(
+                height: height,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
               errorWidget: (context, url, error) =>
               const Icon(Icons.broken_image, size: 100),
             ),

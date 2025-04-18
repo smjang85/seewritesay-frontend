@@ -102,4 +102,26 @@ class UserApiService {
       throw Exception('사용자 정보 조회 실패: ${response.statusCode}');
     }
   }
+
+  static Future<void> deleteAccount() async {
+    final token = await StorageService.getToken(); // 🔑 토큰 불러오기
+
+    final uri = Uri.parse(ApiConstants.userDeleteAccountUrl);
+
+    final response = await http.delete(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      // 탈퇴 성공
+      return;
+    } else {
+      throw Exception('회원 탈퇴 실패: ${response.statusCode} ${response.body}');
+    }
+  }
+
 }

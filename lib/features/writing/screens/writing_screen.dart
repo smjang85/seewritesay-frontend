@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:see_write_say/features/user/providers/user_profile_provider.dart';
 import 'package:see_write_say/core/presentation/theme/text_styles.dart';
 import 'package:see_write_say/features/image/dto/image_dto.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
-import 'package:see_write_say/core/presentation/components/common_image_viewer.dart';
+import 'package:see_write_say/core/presentation/components/common/common_image_viewer.dart';
 import 'package:see_write_say/features/writing/providers/writing_provider.dart';
 
 class WritingScreen extends StatelessWidget {

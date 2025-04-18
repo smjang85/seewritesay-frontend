@@ -1,8 +1,10 @@
+import 'package:see_write_say/core/logic/session_manager.dart';
 import 'package:see_write_say/core/presentation/helpers/snackbar_helper.dart';
 import 'package:see_write_say/features/user/api/user_api_service.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class AgeGroup {
   final String label;
@@ -51,7 +53,11 @@ class UserProfileProvider extends ChangeNotifier {
 
   void initFromRouter(BuildContext context) {
     final extra =
-        GoRouter.of(context).routerDelegate.currentConfiguration.extra;
+        GoRouter
+            .of(context)
+            .routerDelegate
+            .currentConfiguration
+            .extra;
     if (extra is AgeGroup) {
       selectedAgeGroup = extra;
     } else if (extra is String) {
@@ -146,7 +152,8 @@ class UserProfileProvider extends ChangeNotifier {
       final profile = await UserApiService.getCurrentUserProfile();
       nicknameController.text = profile.nickname ?? '';
       originalNickname = profile.nickname;
-      selectedAvatar = profile.avatar != null ? 'assets/avatars/${profile.avatar}' : null;
+      selectedAvatar =
+      profile.avatar != null ? 'assets/avatars/${profile.avatar}' : null;
       selectedAgeGroup = AgeGroup.fromValue(profile.ageGroup);
       isNewUser = (profile.nickname == null || profile.nickname!.isEmpty);
       notifyListeners();
@@ -155,4 +162,27 @@ class UserProfileProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteAccountAndNavigate(BuildContext context) async {
+    try {
+      await UserApiService.deleteAccount();
+
+      // ✅ 세션 제거
+      final sessionManager = context.read<SessionManager>();
+      sessionManager.disposeSession();
+
+      // ✅ 탈퇴 완료 스낵바
+      SnackbarHelper.show(
+        context,
+        "👋 회원 탈퇴가 완료되었습니다.\n다시 찾아와 주세요!",
+        seconds: 3,
+      );
+
+      // ✅ 로그인 화면으로 이동
+      await Future.delayed(const Duration(milliseconds: 500));
+      NavigationHelpers.goToLoginScreen(context);
+    } catch (e) {
+      SnackbarHelper.showError(context, e);
+      rethrow;
+    }
+  }
 }

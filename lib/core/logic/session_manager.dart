@@ -127,22 +127,27 @@ class SessionManager extends ChangeNotifier with WidgetsBindingObserver {
   void _extendSession() async {
     try {
       final newToken = await AuthApiService.refreshToken();
-      if (newToken != null) {
+      debugPrint("🔐 refreshToken 결과: $newToken");
+
+      if (newToken != null && newToken.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', newToken);
-        debugPrint("✅ 새로운 JWT 토큰 저장 완료");
+        debugPrint("✅ SharedPreferences에 토큰 저장됨");
 
         if (_isContextValid()) {
+          debugPrint("🔄 세션 타이머 재시작 시도");
           startSessionTimer(_lastContext!);
         }
       } else {
+        debugPrint("⚠️ refreshToken 결과 null/empty");
         _showSessionExpiredPopup();
       }
     } catch (e) {
-      debugPrint("❌ 토큰 갱신 실패: $e");
+      debugPrint("❌ _extendSession 중 예외 발생: $e");
       _showSessionExpiredPopup();
     }
   }
+
 
   void _showSessionExpiredPopup() {
     _cancelTimerIfExists();

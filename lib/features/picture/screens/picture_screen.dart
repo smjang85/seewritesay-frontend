@@ -6,10 +6,10 @@ import 'package:see_write_say/features/picture/providers/picture_provider.dart';
 import 'package:see_write_say/features/user/api/user_api_service.dart';
 import 'package:see_write_say/features/user/providers/user_profile_provider.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
-import 'package:see_write_say/core/presentation/components/app_drawer_menu.dart';
-import 'package:see_write_say/core/presentation/components/app_exit_scope.dart';
-import 'package:see_write_say/core/presentation/components/common_dropdown.dart';
-import 'package:see_write_say/core/presentation/components/common_image_viewer.dart';
+import 'package:see_write_say/core/presentation/components/layout/app_drawer_menu.dart';
+import 'package:see_write_say/core/presentation/components/layout/app_exit_scope.dart';
+import 'package:see_write_say/core/presentation/components/common/common_dropdown.dart';
+import 'package:see_write_say/core/presentation/components/common/common_image_viewer.dart';
 import 'package:see_write_say/core/presentation/theme/text_styles.dart';
 
 class PictureScreen extends StatefulWidget {
@@ -115,6 +115,7 @@ class _PictureScreenState extends State<PictureScreen> {
       showCheck: alreadyUsed,
       height: 380,
       borderRadius: 16,
+      fit: BoxFit.cover
     )
         : const Center(child: Icon(Icons.image_not_supported));
   }

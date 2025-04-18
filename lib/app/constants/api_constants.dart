@@ -18,6 +18,7 @@ class ApiConstants {
   static String get userGenerateNicknameUrl => '$baseUrl/api/v1/user/generate-nickname';
   static String get userUpdateProfileUrl => '$baseUrl/api/v1/user/update-profile';
   static String get userCurrentProfileUrl => '$baseUrl/api/v1/user/current-user-profile';
+  static String get userDeleteAccountUrl => '$baseUrl/api/v1/user/delete';
 
   // 이미지 관련 URL
   static String get imagesUrl => '$baseUrl/api/v1/images';

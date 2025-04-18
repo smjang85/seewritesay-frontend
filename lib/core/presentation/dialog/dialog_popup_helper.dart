@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:see_write_say/core/helpers/system/keyboard_helper.dart';
 import 'package:see_write_say/features/reading/dto/ai_reading_feeback_dto.dart';
 import 'package:see_write_say/features/reading/api/reading_api_service.dart';
@@ -44,14 +45,18 @@ class DialogPopupHelper {
     required BuildContext context,
     required String filePath,
     required int imageId,
-    String? sentence
+    String? sentence,
   }) async {
     final confettiController = ConfettiController(
       duration: const Duration(seconds: 2),
     );
 
     try {
-      final data = await ReadingApiService.fetchAIReadingFeedback(filePath, imageId, sentence);
+      final data = await ReadingApiService.fetchAIReadingFeedback(
+        filePath,
+        imageId,
+        sentence,
+      );
       final feedback = AiReadingFeedbackDto.fromJson(data);
 
       // 평균 점수 계산
@@ -88,7 +93,7 @@ class DialogPopupHelper {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
-                          "AI 발음 평가 결과",
+                          "AI 읽기 피드백",
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -113,13 +118,13 @@ class DialogPopupHelper {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          "🎙️ 신뢰도: ${(feedback.confidence * 100).toStringAsFixed(1)}%",
+                          "🎙️ AI가 얼마나 확신했는지: ${(feedback.confidence * 100).toStringAsFixed(1)}%",
                         ),
                         const Divider(),
                         _scoreRow("🎯 정확도", feedback.accuracyScore),
                         _scoreRow("💬 유창성", feedback.fluencyScore),
                         _scoreRow("🧩 완성도", feedback.completenessScore),
-                        _scoreRow("🔊 운율점수", feedback.pronScore),
+                        _scoreRow("🔊 리듬/억양", feedback.pronScore),
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(),
@@ -246,33 +251,57 @@ class DialogPopupHelper {
   }
 
   static void showErrorDialog(BuildContext context, Object error) {
-    String raw = error.toString().replaceAll('Exception: ', '');
     String msg = '알 수 없는 오류가 발생했습니다.';
+    String raw = error.toString().replaceAll('Exception: ', '');
 
-    // 디버깅용 로그 출력
     debugPrint("❌ 오류 상세: $raw");
 
     try {
-      // 401 인증 오류 메시지 커스텀 처리
-      if (raw.contains("status code of 401")) {
-        msg = '🔐 로그인 인증이 만료되었거나 잘못되었습니다.\n다시 로그인해주세요.';
-      } else if (raw.contains("Connection timed out") || raw.contains("SocketException")) {
-        msg = '⏱️ 서버에 연결할 수 없습니다.\n인터넷 연결을 확인해주세요.';
+      if (error is DioException) {
+        final statusCode = error.response?.statusCode;
+
+        // ✅ 상태코드 기반 에러 메시지
+        switch (statusCode) {
+          case 500:
+            msg = '🚨 서버 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.';
+            break;
+          case 404:
+            msg = '🔍 요청한 정보를 찾을 수 없습니다.';
+            break;
+          case 401:
+            msg = '🔐 로그인 인증이 만료되었거나 잘못되었습니다.\n다시 로그인해주세요.';
+            break;
+          case 403:
+            msg = '⛔ 접근 권한이 없습니다.';
+            break;
+          case 408:
+            msg = '⏱ 요청 시간이 초과되었습니다.\n인터넷 연결을 확인해주세요.';
+            break;
+          default:
+          // 서버가 커스텀 메시지를 줄 수 있음
+            final data = error.response?.data;
+            if (data is Map<String, dynamic>) {
+              msg = data['message'] ?? data['errorCode'] ?? msg;
+            }
+        }
+      } else if (raw.contains("Connection timed out") ||
+          raw.contains("SocketException")) {
+        msg = '📡 네트워크 연결에 실패했습니다.\n인터넷을 확인해주세요.';
       } else {
+        // 혹시 JSON 문자열이 있다면 파싱 시도
         final jsonStart = raw.indexOf('{');
         if (jsonStart != -1) {
           final jsonPart = raw.substring(jsonStart);
           final decoded = jsonDecode(jsonPart);
           if (decoded is Map<String, dynamic>) {
-            msg = decoded['message'] ?? decoded['errorCode'] ?? raw;
+            msg = decoded['message'] ?? decoded['errorCode'] ?? msg;
           }
         } else {
           msg = raw;
         }
       }
-    } catch (_) {
-      // JSON 파싱 실패 시 기존 메시지 유지
-      msg = raw;
+    } catch (e) {
+      debugPrint("⚠️ 오류 메시지 파싱 실패: $e");
     }
 
     showDialog(
@@ -289,6 +318,7 @@ class DialogPopupHelper {
       ),
     );
   }
+
   static Future<void> showCountdownBlockingDialog({
     required BuildContext context,
     required int countdownSeconds,
@@ -329,34 +359,29 @@ class DialogPopupHelper {
                 SizedBox(width: 8),
                 Text(
                   "세션 연장",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
 
             content: ValueListenableBuilder<int>(
               valueListenable: secondsLeft,
-              builder: (_, value, __) => Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    "세션이 곧 만료됩니다.",
-                    textAlign: TextAlign.center,
+              builder:
+                  (_, value, __) => Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text("세션이 곧 만료됩니다.", textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      Text(
+                        "남은 시간: ${value}s",
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "남은 시간: ${value}s",
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
             ),
             actionsAlignment: MainAxisAlignment.center,
             actions: [
@@ -370,10 +395,7 @@ class DialogPopupHelper {
                   backgroundColor: Colors.indigo,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text(
-                  "세션 연장하기",
-                  style: TextStyle(fontSize: 16),
-                ),
+                child: const Text("세션 연장하기", style: TextStyle(fontSize: 16)),
               ),
             ],
           ),
@@ -383,11 +405,7 @@ class DialogPopupHelper {
       timer?.cancel();
       secondsLeft.dispose();
     });
-
-
   }
-
-
 
   /// 공통 로딩 다이얼로그
   static void showLoadingDialog(BuildContext context) {
@@ -435,10 +453,7 @@ class _RotatingHourglassState extends State<_RotatingHourglass>
   Widget build(BuildContext context) {
     return RotationTransition(
       turns: animation,
-      child: const Text(
-        "⏳",
-        style: TextStyle(fontSize: 26),
-      ),
+      child: const Text("⏳", style: TextStyle(fontSize: 26)),
     );
   }
 }

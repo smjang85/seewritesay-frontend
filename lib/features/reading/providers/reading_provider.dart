@@ -1,41 +1,36 @@
 import 'dart:async';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:see_write_say/core/helpers/format/format_helper.dart';
+import 'package:see_write_say/core/providers/audio/base_audio_provider.dart';
+import 'package:string_similarity/string_similarity.dart';
 import 'package:see_write_say/app/constants/constants.dart';
+import 'package:see_write_say/core/presentation/dialog/dialog_popup_helper.dart';
 import 'package:see_write_say/core/presentation/helpers/snackbar_helper.dart';
 import 'package:see_write_say/features/image/dto/image_dto.dart';
 import 'package:see_write_say/features/reading/api/reading_api_service.dart';
 import 'package:see_write_say/features/writing/api/writing_api_service.dart';
-import 'package:see_write_say/core/presentation/dialog/dialog_popup_helper.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_sound/flutter_sound.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:string_similarity/string_similarity.dart';
 
-class ReadingProvider extends ChangeNotifier {
+class ReadingProvider extends BaseAudioProvider {
   String sentence = '';
   ImageDto? imageDto;
 
   bool _isRecording = false;
   String currentFilePath = '';
-  Duration position = Duration.zero;
-  Duration duration = Duration.zero;
-
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  StreamSubscription<Duration>? _positionSub;
 
   bool showResult = false;
   double accuracy = 0.0;
   String feedback = '';
 
-  String? _currentFile;
-  bool _isPlaying = false;
-  bool _isPaused = false;
-
   int _feedbackReadingRemainingCount = -1;
+
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  final FlutterTts _flutterTts = FlutterTts();
 
   String get feedbackReadingRemainingCount {
     if (_feedbackReadingRemainingCount == -1) return '조회중';
@@ -43,38 +38,16 @@ class ReadingProvider extends ChangeNotifier {
     return '$_feedbackReadingRemainingCount회 남음';
   }
 
-  final FlutterTts _flutterTts = FlutterTts();
+  bool get isRecording => _isRecording;
 
-  Future<void> speakSentence() async {
-    if (sentence.isEmpty) return;
-    await _flutterTts.setLanguage("en-US");
-    await _flutterTts.setPitch(1.0);
-    await _flutterTts.speak(sentence);
-  }
+  bool get isPlayable => currentFilePath.isNotEmpty && File(currentFilePath).existsSync();
 
-  /// 초기화
   Future<void> initialize(BuildContext context, String sentence, {ImageDto? imageDto}) async {
     this.sentence = sentence;
     this.imageDto = imageDto;
 
     await _recorder.openRecorder();
-    await _audioPlayer.setLoopMode(LoopMode.off);
-
-    _positionSub = _audioPlayer.positionStream.listen((pos) {
-      position = pos;
-      duration = _audioPlayer.duration ?? Duration.zero;
-      notifyListeners();
-    });
-
-    _audioPlayer.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) {
-        _isPlaying = false;
-        _isPaused = false;
-        _currentFile = null;
-        position = Duration.zero;
-        notifyListeners();
-      }
-    });
+    await initAudioPlayer();
 
     if (imageDto?.id != null) {
       final counts = await WritingApiService.fetchRemainingCounts(imageDto!.id);
@@ -84,26 +57,28 @@ class ReadingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 녹음 시작
+  Future<void> speakSentence() async {
+    if (sentence.isEmpty) return;
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setPitch(1.0);
+    await _flutterTts.speak(sentence);
+  }
+
   Future<void> startRecording() async {
     final status = await Permission.microphone.request();
     if (!status.isGranted) return;
 
-    await _audioPlayer.stop();
+    await stopPlayback();
 
     final dir = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
-    final fileName =
-        '${imageDto?.id}_${imageDto?.name.split('.').first}_${_formatDateTime(now)}';
-    final newFilePath = '${dir.path}/$fileName.aac';
+    final fileName = '${imageDto?.id}_${FormatHelper.formatDateTime(now)}.aac';
+    final newFilePath = '${dir.path}/$fileName';
 
     final files = dir
         .listSync()
         .whereType<File>()
-        .where((f) =>
-    f.path.endsWith('.aac') &&
-        imageDto != null &&
-        f.path.contains('${imageDto!.id}_'))
+        .where((f) => f.path.endsWith('.aac') && imageDto != null && f.path.contains('${imageDto!.id}_'))
         .toList();
 
     if (files.length >= Constants.readingRecordLength) {
@@ -114,10 +89,6 @@ class ReadingProvider extends ChangeNotifier {
       }
     }
 
-    _isPlaying = false;
-    _isPaused = false;
-    position = Duration.zero;
-    duration = Duration.zero;
     currentFilePath = newFilePath;
     _isRecording = true;
     notifyListeners();
@@ -133,8 +104,6 @@ class ReadingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get isRecording => _isRecording;
-
   void evaluateRecording(String inputText) {
     final similarity = sentence.similarityTo(inputText);
     accuracy = similarity;
@@ -146,58 +115,12 @@ class ReadingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isPlayingFile(String filePath) =>
-      _isPlaying && !_isPaused && _currentFile == filePath;
-
-  bool isPausedFile(String filePath) =>
-      _isPaused && _currentFile == filePath;
-
   Future<void> playMyVoiceRecording(String filePath) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final fullPath =
-    filePath.contains(dir.path) ? filePath : '${dir.path}/$filePath';
-
-    if (_isPlaying && _currentFile == filePath) {
-      if (_isPaused) {
-        _isPaused = false;
-        _isPlaying = true;
-        notifyListeners();
-        await _audioPlayer.play();
-      } else {
-        _isPaused = true;
-        notifyListeners();
-        await _audioPlayer.pause();
-      }
-      return;
-    }
-
-    await _audioPlayer.stop();
-    _isPlaying = false;
-    _isPaused = false;
-    notifyListeners();
-
-    await _audioPlayer.setFilePath(fullPath);
-    _currentFile = filePath;
-    _isPlaying = true;
-    _isPaused = false;
-    notifyListeners();
-
-    await _audioPlayer.play();
+    await playFile(filePath);
   }
 
   Future<void> stopMyVoicePlayback() async {
-    await _audioPlayer.stop();
-    _isPlaying = false;
-    _isPaused = false;
-    position = Duration.zero;
-    _currentFile = null;
-    notifyListeners();
-  }
-
-  Future<void> seekTo(Duration value) async {
-    if (duration > Duration.zero) {
-      await _audioPlayer.seek(value);
-    }
+    await stopPlayback();
   }
 
   Future<void> evaluatePronunciation(BuildContext context) async {
@@ -232,21 +155,10 @@ class ReadingProvider extends ChangeNotifier {
     }
   }
 
-  String _twoDigits(int n) => n.toString().padLeft(2, '0');
-
-  String _formatDateTime(DateTime now) {
-    return '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_${_twoDigits(now.hour)}${_twoDigits(now.minute)}${_twoDigits(now.second)}';
-  }
-
-  bool get isPlayable {
-    return currentFilePath.isNotEmpty && File(currentFilePath).existsSync();
-  }
 
   @override
   void dispose() {
     _recorder.closeRecorder();
-    _audioPlayer.dispose();
-    _positionSub?.cancel();
     super.dispose();
   }
 }

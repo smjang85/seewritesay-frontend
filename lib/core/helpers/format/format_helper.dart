@@ -29,4 +29,27 @@ class FormatHelper {
       return isoString;
     }
   }
+
+  static String formatDateTime(DateTime now) {
+    return '${now.year}${_twoDigits(now.month)}${_twoDigits(now.day)}_'
+        '${_twoDigits(now.hour)}${_twoDigits(now.minute)}${_twoDigits(now.second)}';
+  }
+
+  static String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+
+
+
+  static String formatTime(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
+  static String formatDurationHHMMSS(Duration d) {
+    final hours = d.inHours.toString().padLeft(2, '0');
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
 }

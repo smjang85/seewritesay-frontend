@@ -1,14 +1,16 @@
 import 'package:see_write_say/app/constants/api_constants.dart';
 import 'package:see_write_say/core/helpers/format/format_helper.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
-import 'package:see_write_say/core/presentation/components/common_dropdown.dart';
-import 'package:see_write_say/core/presentation/components/common_empty_message.dart';
+import 'package:see_write_say/core/presentation/components/common/common_dropdown.dart';
+import 'package:see_write_say/core/presentation/components/common/common_empty_message.dart';
 import 'package:see_write_say/core/presentation/theme/text_styles.dart';
 import 'package:see_write_say/features/history/providers/history_reading_provider.dart';
 import 'package:see_write_say/features/image/providers/image_list_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:see_write_say/core/presentation/components/audio/audio_control_bar.dart';
+
 
 class HistoryReadingScreen extends StatefulWidget {
   const HistoryReadingScreen({super.key});
@@ -44,6 +46,7 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
       value: _provider,
       child: Consumer<HistoryReadingProvider>(
         builder: (context, provider, _) {
+
           final recordings = provider.groupedRecordings;
           final imageNames = recordings.keys.toList();
 
@@ -97,7 +100,7 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
   Widget _buildGroupedList(HistoryReadingProvider provider) {
     final selected = provider.selectedImageGroup;
     final files = provider.groupedRecordings[selected] ?? [];
-    final imageDto = provider.imageDtoMap[selected];
+    final imageDto = provider.selectedImageDto;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -128,37 +131,18 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              Slider(
-                value: provider.position.inMilliseconds
-                    .clamp(0, provider.duration.inMilliseconds.toDouble())
-                    .toDouble(),
-                max: provider.duration.inMilliseconds.toDouble(),
-                onChanged: (value) {
-                  provider.seekTo(Duration(milliseconds: value.toInt()));
-                },
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    provider.currentFile != null &&
-                        provider.duration.inMilliseconds > 0
-                        ? _formatTime(provider.position)
-                        : '00:00',
-                    style: kTimestampTextStyle,
-                  ),
-                  Text(
-                    provider.currentFile != null &&
-                        provider.duration.inMilliseconds > 0
-                        ? _formatTime(provider.duration)
-                        : '00:00',
-                    style: kTimestampTextStyle,
-                  ),
-                ],
-              ),
-            ],
+          child: AudioControlBar(
+            position: provider.position,
+            duration: provider.duration,
+            isPlaying: provider.isPlayingFile(provider.currentFile ?? ''),
+            isPaused: provider.isPausedFile(provider.currentFile ?? ''),
+            onPlayPause: () {
+              if (provider.currentFile != null) {
+                provider.playRecording(provider.currentFile!);
+              }
+            },
+            onStop: () => provider.stopPlayback(),
+            onSeek: (value) => provider.seekTo(value),
           ),
         ),
         const SizedBox(height: 16),
@@ -210,10 +194,4 @@ class _HistoryReadingScreenState extends State<HistoryReadingScreen> {
     );
   }
 
-  String _formatTime(Duration duration) {
-    final seconds = duration.inSeconds;
-    final minutes = (seconds / 60).floor();
-    final remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
 }

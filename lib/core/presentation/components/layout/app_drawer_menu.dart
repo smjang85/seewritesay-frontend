@@ -25,7 +25,7 @@ class AppDrawerMenu extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          _buildHeader(context),// 👤 상단 사용자 정보
+          _buildHeader(context), // 👤 상단 사용자 정보
           ListTile(
             leading: Icon(Icons.edit_note),
             title: Text("진행한 작문"),
@@ -46,23 +46,62 @@ class AppDrawerMenu extends StatelessWidget {
             },
           ),
           const Divider(),
-          isLoggedIn
-              ? ListTile(
-            leading: Icon(Icons.logout, color: Colors.redAccent),
-            title: Text("로그아웃"),
-            onTap: onLogout,
-          )
-              : ListTile(
-            leading: Icon(Icons.login),
-            title: Text("로그인"),
-            onTap: () {
-              Navigator.of(context).pop();
-            },
-          ),
+          if (isLoggedIn)
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.redAccent),
+              title: Text("로그아웃"),
+              onTap: onLogout,
+            ),
+          if (isLoggedIn)
+            ListTile(
+              leading: const Icon(Icons.delete_forever, color: Colors.red),
+              title: const Text("회원 탈퇴", style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("회원 탈퇴"),
+                    content: const Text("정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다."),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text("취소"),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text("탈퇴", style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirmed == true) {
+                  try {
+                    await context.read<UserProfileProvider>().deleteAccountAndNavigate(context);
+                    if (onLogout != null) onLogout!();
+                  } catch (e) {
+                    debugPrint("❌ 탈퇴 실패: $e");
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("회원 탈퇴 중 오류가 발생했습니다.")),
+                    );
+                  }
+                }
+              },
+            ),
+          if (!isLoggedIn)
+            ListTile(
+              leading: Icon(Icons.login),
+              title: Text("로그인"),
+              onTap: () {
+                Navigator.of(context).pop();
+                // 로그인 화면으로 이동하려면 필요 시 여기에 추가
+              },
+            ),
         ],
       ),
     );
   }
+
   Widget _buildHeader(BuildContext context) {
     return Consumer<UserProfileProvider>(
       builder: (context, provider, child) {
@@ -82,9 +121,15 @@ class AppDrawerMenu extends StatelessWidget {
               children: [
                 avatarPath.isNotEmpty
                     ? ClipOval(
-                  child: Image.asset(avatarPath, width: 64, height: 64, fit: BoxFit.cover),
+                  child: Image.asset(
+                    avatarPath,
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                  ),
                 )
-                    : const Icon(Icons.account_circle, color: Colors.white, size: 64),
+                    : const Icon(Icons.account_circle,
+                    color: Colors.white, size: 64),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
@@ -101,7 +146,4 @@ class AppDrawerMenu extends StatelessWidget {
       },
     );
   }
-
-
-
 }
