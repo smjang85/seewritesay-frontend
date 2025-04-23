@@ -1,10 +1,26 @@
 import java.util.Properties
 import java.io.FileInputStream
 
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
+}
+
+dependencies {
+    // ✅ 최신 Play Core 구성요소
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    implementation("com.google.android.play:review:2.0.2")
+    implementation("com.google.android.play:review-ktx:2.0.2")
+
+    // ✅ Jetpack 필수 유틸 (core-ktx는 androidx 네임스페이스)
+    implementation("androidx.core:core-ktx:1.16.0")
+
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }
 
 android {
@@ -13,12 +29,12 @@ android {
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_21.toString()
     }
 
     signingConfigs {
@@ -52,9 +68,13 @@ android {
     buildTypes {
         getByName("release") {
             signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 
@@ -70,3 +90,5 @@ android {
 flutter {
     source = "../.."
 }
+
+apply(plugin = "com.google.gms.google-services")

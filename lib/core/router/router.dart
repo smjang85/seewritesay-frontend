@@ -1,6 +1,9 @@
 import 'package:see_write_say/features/image/dto/image_dto.dart';
 import 'package:see_write_say/features/history/screens/history_reading_screen.dart';
 import 'package:see_write_say/features/history/screens/history_writing_screen.dart';
+import 'package:see_write_say/features/story/dto/story_dto.dart';
+import 'package:see_write_say/features/story/screens/story_main_screen.dart';
+import 'package:see_write_say/features/story/screens/story_reading_screen.dart';
 import 'package:see_write_say/features/user/screens/user_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -95,6 +98,21 @@ final GoRouter appRouter = GoRouter(
         final token = state.uri.queryParameters['token'] ?? '';
         debugPrint("✅ token from query: $token");
         return AuthCallbackScreen(token: token);
+      },
+    ),
+    GoRoute(
+      path: '/storyMain',
+      name: 'storyMain',
+      builder: (context, state) => const StoryMainScreen(),
+    ),
+    GoRoute(
+      name: 'storyReading',
+      path: '/storyReading',
+      pageBuilder: (context, state) {
+        final story = state.extra as StoryDto;
+        return MaterialPage(
+          child: StoryReadingScreen(story: story),
+        );
       },
     ),
   ],

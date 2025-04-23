@@ -27,6 +27,9 @@ class _PictureScreenState extends State<PictureScreen> {
   void initState() {
     super.initState();
     _initScreen();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LoginProvider>().refreshLoginState();
+    });
   }
 
   Future<void> _initScreen() async {
@@ -37,10 +40,10 @@ class _PictureScreenState extends State<PictureScreen> {
     imageListProvider.setImages(provider.images);
     await provider.loadUsedImages();
 
-    context.read<UserProfileProvider>().initializeProfile();
+    context.read<UserProfileProvider>().initializeProfile(context);
 
     try {
-      final profile = await UserApiService.getCurrentUserProfile();
+      final profile = await UserApiService.getProfileCurrentUser();
       setState(() {
         nickname = profile.nickname;
         avatar = profile.avatar != null ? '${profile.avatar}' : null;
@@ -65,12 +68,7 @@ class _PictureScreenState extends State<PictureScreen> {
             children: [SizedBox(width: 8), Text("See Write Say", style: kHeadingTextStyle)],
           ),
         ),
-        drawer: AppDrawerMenu(
-          isLoggedIn: isLoggedIn,
-          nickname: nickname,
-          avatar: avatar,
-          onLogout: () => context.read<LoginProvider>().logout(context),
-        ),
+        drawer: const AppDrawerMenu(),
         body: RefreshIndicator(
           onRefresh: () async {
             await provider.fetchImages();

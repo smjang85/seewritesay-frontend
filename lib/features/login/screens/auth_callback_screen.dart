@@ -38,7 +38,7 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
       if (!mounted) return;
 
       // ✅ 프로필 조회
-      final profile = await UserApiService.getCurrentUserProfile();
+      final profile = await UserApiService.getProfileCurrentUser();
       debugPrint("profile.avatar: ${profile.avatar}");
       final hasProfile =
           (profile.nickname?.isNotEmpty ?? false) && (profile.avatar?.isNotEmpty ?? false);

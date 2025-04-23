@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:see_write_say/features/user/providers/user_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:see_write_say/core/router/router.dart';
@@ -15,10 +16,12 @@ import 'package:see_write_say/core/logic/session_manager.dart';
 import 'package:see_write_say/core/monitor/user_activity_monitor.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: WidgetsFlutterBinding.ensureInitialized());
+  final binding = WidgetsFlutterBinding.ensureInitialized(); // ✅ 바인딩 한 번만 호출
+  FlutterNativeSplash.preserve(widgetsBinding: binding);    // ✅ 이 위치가 맞음
 
-  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+  await Firebase.initializeApp(); // ✅ Firebase 초기화는 그 다음
+
+  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'prod');
   await dotenv.load(fileName: flavor == 'prod' ? '.env.prod' : '.env.dev');
 
   runApp(
@@ -33,7 +36,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => SessionManager()),
       ],
       child: const UserActivityMonitor(
-        child: SeeWriteSayApp(), // ✅ 감쌌음!
+        child: SeeWriteSayApp(),
       ),
     ),
   );

@@ -46,6 +46,30 @@ class ReadingProvider extends BaseAudioProvider {
     this.sentence = sentence;
     this.imageDto = imageDto;
 
+
+    // 🔒 마이크 권한 요청 먼저
+    final status = await Permission.microphone.status;
+
+    if (status.isPermanentlyDenied || status.isDenied) {
+      final result = await Permission.microphone.request();
+
+      // 요청했는데도 불구하고 여전히 거부 상태면 → 설정 유도
+      if (!result.isGranted) {
+        await DialogPopupHelper.showPermissionDeniedDialog(
+          context: context,
+          title: '🎤 마이크 권한이 필요합니다',
+          content: '읽기 기능을 사용하려면 마이크 권한이 필요합니다.\n[설정]에서 권한을 허용해주세요.',
+        );
+        return;
+      }
+    }
+
+
+    // 🔁 (선택) iOS 안정성을 위해 이미 열려있을 수 있으므로 먼저 닫고 시작
+    if (_recorder.isRecording || _recorder.isPaused || _recorder.isStopped == false) {
+      await _recorder.closeRecorder();
+    }
+
     await _recorder.openRecorder();
     await initAudioPlayer();
 
@@ -56,6 +80,7 @@ class ReadingProvider extends BaseAudioProvider {
 
     notifyListeners();
   }
+
 
   Future<void> speakSentence() async {
     if (sentence.isEmpty) return;
@@ -139,6 +164,9 @@ class ReadingProvider extends BaseAudioProvider {
         return;
       }
 
+      // ✅ 로딩 다이얼로그 띄우기
+      DialogPopupHelper.showLoadingDialog(context);
+
       await DialogPopupHelper.evaluatePronunciationDialog(
         context: context,
         filePath: currentFilePath,
@@ -148,10 +176,16 @@ class ReadingProvider extends BaseAudioProvider {
 
       await ReadingApiService.decreaseReadingFeedbackCount(imageId);
       _feedbackReadingRemainingCount--;
+
       notifyListeners();
     } catch (e) {
       debugPrint("❌ 발음 평가 실패: $e");
-      SnackbarHelper.showError(context, e);
+
+    } finally {
+      // ✅ 로딩 다이얼로그 닫기
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     }
   }
 

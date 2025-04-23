@@ -7,7 +7,7 @@ import 'package:see_write_say/features/reading/dto/ai_reading_feeback_dto.dart';
 import 'package:see_write_say/features/reading/api/reading_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-
+import 'package:permission_handler/permission_handler.dart';
 class DialogPopupHelper {
   /// 뒤로가기 및 외부 클릭 방지 팝업 (확인 버튼만 있는 타입)
   static Future<void> showBlockingDialog({
@@ -413,6 +413,36 @@ class DialogPopupHelper {
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  /// 마이크 등 시스템 권한 요청 후 '설정 열기' 안내 다이얼로그
+  static Future<void> showPermissionDeniedDialog({
+    required BuildContext context,
+    String title = '권한 필요',
+    String content = '이 기능을 사용하려면 권한이 필요합니다.\n설정에서 권한을 허용해주세요.',
+    String confirmText = '설정 열기',
+  }) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await openAppSettings(); // 시스템 설정 앱 열기
+            },
+            child: Text(confirmText),
+          ),
+        ],
+      ),
     );
   }
 }

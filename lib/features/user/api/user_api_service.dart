@@ -10,7 +10,7 @@ class UserApiService {
   static Future<bool> checkNicknameAvailable(String nickname) async {
     final token = await StorageService.getToken(); // ✅ 토큰 불러오기
 
-    final uri = Uri.parse(ApiConstants.userCheckNicknameUrl)
+    final uri = Uri.parse(ApiConstants.userProfileCheckNicknameUrl)
         .replace(queryParameters: {'nickname': nickname});
 
     final response = await http.get(
@@ -32,7 +32,7 @@ class UserApiService {
   static Future<String> generateRandomNickname() async {
     final token = await StorageService.getToken(); // ✅ 토큰 필요 시 동일하게 적용
 
-    final uri = Uri.parse(ApiConstants.userGenerateNicknameUrl);
+    final uri = Uri.parse(ApiConstants.userProfileGenerateNicknameUrl);
 
     final response = await http.get(
       uri,
@@ -57,7 +57,7 @@ class UserApiService {
   }) async {
     final token = await StorageService.getToken(); // ✅ 토큰 불러오기
 
-    final uri = Uri.parse(ApiConstants.userUpdateProfileUrl);
+    final uri = Uri.parse(ApiConstants.userProfileUpdateUrl);
     final avatarFileName = avatar
         .split('/')
         .last;
@@ -82,10 +82,10 @@ class UserApiService {
     }
   }
 
-  static Future<UserProfileDto> getCurrentUserProfile() async {
+  static Future<UserProfileDto> getProfileCurrentUser() async {
     final token = await StorageService.getToken();
 
-    final uri = Uri.parse(ApiConstants.userCurrentProfileUrl);
+    final uri = Uri.parse(ApiConstants.userProfileCurrentUserUrl);
 
     final response = await http.get(
       uri,

@@ -9,7 +9,7 @@ class UserProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => UserProfileProvider()..initializeProfile(),
+      create: (_) => UserProfileProvider()..initializeProfile(context),
       child: const UserProfileView(),
     );
   }

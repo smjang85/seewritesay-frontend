@@ -147,9 +147,9 @@ class UserProfileProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> initializeProfile() async {
+  Future<void> initializeProfile(BuildContext context) async {
     try {
-      final profile = await UserApiService.getCurrentUserProfile();
+      final profile = await UserApiService.getProfileCurrentUser();
       nicknameController.text = profile.nickname ?? '';
       originalNickname = profile.nickname;
       selectedAvatar =
@@ -159,6 +159,16 @@ class UserProfileProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('❌ 프로필 초기화 실패: $e');
+      if (e.toString().contains('JWT') || e.toString().contains('401')) {
+        final sessionManager = context.read<SessionManager>();
+        sessionManager.disposeSession();
+
+        notifyListeners();
+
+        if (context.mounted) {
+          NavigationHelpers.goToLoginScreen(context);
+        }
+      }
     }
   }
 

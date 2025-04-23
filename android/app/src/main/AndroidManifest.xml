@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.seewritesay.app"
+    >
 
     <!-- ✅ 필수 권한들 (위치 주의: manifest 안, application 밖) -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
@@ -14,7 +16,7 @@
 
     <application
         android:icon="@mipmap/ic_launcher"
-        android:label="SeeWriteSay"
+        android:label="See Write Say"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"

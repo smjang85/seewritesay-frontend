@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:see_write_say/core/helpers/format/format_helper.dart';
 import 'package:see_write_say/features/image/dto/image_dto.dart';
 import 'package:see_write_say/features/reading/providers/reading_provider.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
@@ -57,8 +56,6 @@ class ReadingContent extends StatelessWidget {
     final isFromPicture = provider.imageDto != null &&
         provider.imageDto!.path.isNotEmpty &&
         provider.sentence.isEmpty;
-
-    final isPlayable = provider.currentFilePath.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:see_write_say/core/data/shared_prefs_service.dart';
 
 class ApiClient {
   static final Dio _dio = Dio(
@@ -20,4 +21,13 @@ class ApiClient {
   ));
 
   static Dio get dio => _dio;
+
+  /// 공통 헤더 생성
+  static Future<Map<String, String>> buildHeaders() async {
+    final token = await StorageService.getToken();
+    return {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+  }
 }

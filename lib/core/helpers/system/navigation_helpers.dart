@@ -3,6 +3,7 @@ import 'package:see_write_say/core/logic/session_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:see_write_say/features/story/dto/story_dto.dart';
 
 class NavigationHelpers {
   static void goToWritingScreen(
@@ -87,5 +88,16 @@ class NavigationHelpers {
 
   static void pushToProfileSetupScreen(BuildContext context) {
     context.pushNamed('profileSetup', queryParameters: {'fromDrawer': 'true'});
+  }
+
+  static void goToStoryMainScreen(BuildContext context) {
+    context.pushNamed('storyMain');
+  }
+
+  static void goToStoryReadingScreen(BuildContext context, StoryDto story) {
+    context.pushNamed(
+      'storyReading',
+      extra: story,
+    );
   }
 }
