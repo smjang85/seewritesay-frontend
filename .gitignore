@@ -54,3 +54,4 @@ app.*.map.json
 
 src/main/resources/firebase-service-account.json
 ios/GoogleService-Info.plist
+GoogleService-Info.plist
