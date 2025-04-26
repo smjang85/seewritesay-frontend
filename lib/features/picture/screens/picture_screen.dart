@@ -56,7 +56,6 @@ class _PictureScreenState extends State<PictureScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PictureProvider>();
-    final isLoggedIn = context.watch<LoginProvider>().isLoggedIn;
     final image = provider.selectedImage;
     final alreadyUsed = provider.isAlreadyUsed;
 

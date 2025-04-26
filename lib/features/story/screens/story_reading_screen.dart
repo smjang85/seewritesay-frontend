@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:see_write_say/core/presentation/theme/text_styles.dart';
+import 'package:see_write_say/features/story/dto/chapter_dto.dart';
 import 'package:see_write_say/features/story/dto/story_dto.dart';
 import 'package:see_write_say/features/story/providers/story_reading_provider.dart';
 
 class StoryReadingScreen extends StatefulWidget {
-  final StoryDto story;
+  final StoryDto? story;
+  final ChapterDto? chapter;
 
-  const StoryReadingScreen({super.key, required this.story});
+  const StoryReadingScreen({
+    super.key,
+    this.story,
+    this.chapter,
+  }) : assert(story != null || chapter != null, 'story 또는 chapter 중 하나는 필수');
 
   @override
   State<StoryReadingScreen> createState() => _StoryReadingScreenState();
@@ -19,7 +26,7 @@ class _StoryReadingScreenState extends State<StoryReadingScreen> {
   void initState() {
     super.initState();
     provider = StoryReadingProvider();
-    provider.initializeWithStory(widget.story);
+    provider.initialize(story: widget.story, chapter: widget.chapter);
   }
 
   @override
@@ -30,11 +37,15 @@ class _StoryReadingScreenState extends State<StoryReadingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final storyId = widget.story?.id ?? widget.chapter!.storyId;
+    final title = widget.story?.title ?? widget.chapter!.title;
+
     return ChangeNotifierProvider.value(
       value: provider,
       child: _StoryReadingContent(
-        storyId: widget.story.id,
-        initialTitle: widget.story.title,
+        storyId: storyId,
+        chapterId: widget.chapter?.id,
+        initialTitle: title,
       ),
     );
   }
@@ -42,12 +53,13 @@ class _StoryReadingScreenState extends State<StoryReadingScreen> {
 
 class _StoryReadingContent extends StatefulWidget {
   final int storyId;
+  final int? chapterId;
   final String initialTitle;
 
   const _StoryReadingContent({
-    super.key,
     required this.storyId,
     required this.initialTitle,
+    this.chapterId,
   });
 
   @override
@@ -74,15 +86,13 @@ class _StoryReadingContentState extends State<_StoryReadingContent> {
         listen: false,
       );
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (provider.story?.content == null ||
-            provider.story!.content.isEmpty) {
-          provider.loadStory(
-            context: context,
-            id: widget.storyId,
-            lang: _selectedLang,
-            autoSpeak: false,
-          );
-        }
+        provider.loadStory(
+          context: context,
+          id: widget.storyId,
+          chapterId: widget.chapterId,
+          lang: _selectedLang,
+          autoSpeak: false,
+        );
       });
       _isFirstLoad = false;
     }
@@ -93,6 +103,7 @@ class _StoryReadingContentState extends State<_StoryReadingContent> {
     provider.loadStory(
       context: context,
       id: widget.storyId,
+      chapterId: widget.chapterId,
       lang: _selectedLang,
       autoSpeak: false,
     );
@@ -105,157 +116,128 @@ class _StoryReadingContentState extends State<_StoryReadingContent> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          story?.title ?? widget.initialTitle,
-          style: const TextStyle(fontSize: 20),
-        ),
-      ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: provider.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : story == null || story.content.isEmpty
-              ? const Center(child: Text("스토리를 불러올 수 없습니다."))
-              : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        title: Text.rich(
+          TextSpan(
             children: [
-              // 언어 선택
-              Row(
-                children: [
-                  DropdownButton<String>(
-                    value: _selectedLang,
-                    items: _langOptions.entries
-                        .map((entry) => DropdownMenuItem<String>(
-                      value: entry.key,
-                      child: Text(entry.value),
-                    ))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null && value != _selectedLang) {
-                        setState(() {
-                          _selectedLang = value;
-                        });
-                        _fetchStory();
-                      }
-                    },
-                  ),
-                ],
-              ),
-
-
-              // 📣 자동 읽기 섹션
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: provider.isSpeaking
-                          ? () {
-                        debugPrint("[중지 버튼] 클릭됨");
-                        provider.stopSpeaking();
-                      }
-                          : () {
-                        debugPrint("[자동 읽기 시작] 버튼 클릭됨");
-                        provider.speakFromCurrent();
-                      },
-                      icon: Icon(provider.isSpeaking ? Icons.stop : Icons.volume_up),
-                      label: Text(provider.isSpeaking ? "중지" : "자동 읽기"),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        provider.isPaused
-                            ? Icons.play_arrow
-                            : provider.isSpeaking
-                            ? Icons.pause
-                            : Icons.play_arrow,
-                      ),
-                      onPressed: () {
-                        debugPrint("[재생/일시정지 버튼]");
-                        if (provider.isPaused) {
-                          provider.resumeSpeaking();
-                        } else if (provider.isSpeaking) {
-                          provider.pauseSpeaking();
-                        } else {
-                          provider.speakFromCurrent();
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.stop),
-                      onPressed: () {
-                        debugPrint("[정지 버튼] 클릭됨");
-                        provider.stopSpeaking();
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.skip_previous),
-                      onPressed: () {
-                        provider.goToPreviousParagraph();
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.skip_next),
-                      onPressed: () {
-                        provider.goToNextParagraph();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => provider.togglePlayRecording(context),
-                    icon: Icon(provider.isPlaying ? Icons.stop : Icons.play_circle_fill),
-                    label: Text(provider.isPlaying ? "재생 중지" : "녹음 읽기"),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => provider.toggleRecording(context),
-                    icon: Icon(provider.isRecording ? Icons.stop_circle : Icons.mic),
-                    label: Text(provider.isRecording ? "녹음 중지" : "녹음하기"),
-                  ),
-                ],
-              ),
-
-
-
-              // 📖 문단 리스트
-              Expanded(
-                child: ListView.builder(
-                  itemCount: provider.paragraphs.length,
-                  itemBuilder: (context, index) {
-                    final para = provider.paragraphs[index];
-                    final isCurrent = index == provider.currentIndex;
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isCurrent ? Colors.yellow.shade100 : null,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          para,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                            color: isCurrent ? Colors.black : Colors.grey.shade800,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              TextSpan(text: '${story?.title ?? widget.initialTitle}', style: kHeadingTextStyle),
             ],
           ),
-        )
-
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: provider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : story == null || story.content.isEmpty
+            ? const Center(child: Text("스토리를 불러올 수 없습니다."))
+            : Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 언어 선택
+            Row(
+              children: [
+                DropdownButton<String>(
+                  value: _selectedLang,
+                  items: _langOptions.entries
+                      .map((entry) => DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null && value != _selectedLang) {
+                      setState(() => _selectedLang = value);
+                      _fetchStory();
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // 🔊 TTS 및 녹음 제어
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: provider.isSpeaking
+                      ? provider.stopSpeaking
+                      : provider.speakFromCurrent,
+                  icon: Icon(
+                    provider.isSpeaking ? Icons.stop : Icons.volume_up,
+                  ),
+                  label: Text(provider.isSpeaking ? "중지" : "자동 읽기"),
+                ),
+                IconButton(
+                  icon: Icon(
+                    provider.isPaused
+                        ? Icons.play_arrow
+                        : provider.isSpeaking
+                        ? Icons.pause
+                        : Icons.play_arrow,
+                  ),
+                  onPressed: () {
+                    if (provider.isPaused) {
+                      provider.resumeSpeaking();
+                    } else if (provider.isSpeaking) {
+                      provider.pauseSpeaking();
+                    } else {
+                      provider.speakFromCurrent();
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.skip_previous),
+                  onPressed: provider.goToPreviousParagraph,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.skip_next),
+                  onPressed: provider.goToNextParagraph,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.mic),
+                  onPressed: () => provider.toggleRecording(context),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.play_circle_fill),
+                  onPressed: () => provider.togglePlayRecording(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 📖 본문
+            Expanded(
+              child: ListView.builder(
+                itemCount: provider.paragraphs.length,
+                itemBuilder: (context, index) {
+                  final para = provider.paragraphs[index];
+                  final isCurrent = index == provider.currentIndex;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isCurrent ? Colors.yellow.shade100 : null,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        para,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight:
+                          isCurrent ? FontWeight.bold : FontWeight.normal,
+                          color: isCurrent ? Colors.black : Colors.grey.shade800,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+
   }
 }

@@ -5,7 +5,6 @@ import 'package:just_audio/just_audio.dart';
 class AudioPlaybackService {
   final AudioPlayer _player = AudioPlayer();
 
-  String? _currentFile;
   bool _isPlaying = false;
   bool _isPaused = false;
 
@@ -58,7 +57,6 @@ class AudioPlaybackService {
     reset();
 
     await _player.setFilePath(fullPath);
-    _currentFile = fullPath;
 
     _isPlaying = true;
     _isPaused = false;
@@ -95,7 +93,6 @@ class AudioPlaybackService {
   void reset() {
     _isPlaying = false;
     _isPaused = false;
-    _currentFile = null;
   }
 
   Future<void> seekTo(Duration position) async {

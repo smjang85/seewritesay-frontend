@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:see_write_say/core/presentation/helpers/snackbar_helper.dart';
-
-import '../../story/api/story_api_service.dart';
-import '../dto/story_dto.dart';
-import '../logic/audio_playback_service.dart';
-import '../logic/recorder_controller.dart';
-import '../logic/tts_controller.dart';
-import '../logic/paragraph_controller.dart';
+import 'package:see_write_say/features/story/api/story_api_service.dart';
+import 'package:see_write_say/features/story/dto/chapter_dto.dart';
+import 'package:see_write_say/features/story/dto/story_dto.dart';
+import 'package:see_write_say/features/story/logic/audio_playback_service.dart';
+import 'package:see_write_say/features/story/logic/paragraph_controller.dart';
+import 'package:see_write_say/features/story/logic/recorder_controller.dart';
+import 'package:see_write_say/features/story/logic/tts_controller.dart';
 
 class StoryReadingProvider extends ChangeNotifier {
   final tts = TtsController();
@@ -36,6 +36,15 @@ class StoryReadingProvider extends ChangeNotifier {
   StoryReadingProvider() {
     tts.onStateChanged = (_) => notifyListeners();
 
+    tts.onComplete = () async {
+      if (!recorder.shouldBlockTts && paragraphController.hasNext) {
+        paragraphController.next();
+        debugPrint("▶️ 자동 다음 문단: index=$currentIndex");
+        await tts.speak(paragraphs[currentIndex]);
+      }
+      notifyListeners();
+    };
+
     audioService.setCallbacks(
       onChange: () => notifyListeners(),
       onComplete: () {
@@ -43,6 +52,18 @@ class StoryReadingProvider extends ChangeNotifier {
         notifyListeners();
       },
     );
+  }
+
+  void initialize({StoryDto? story, ChapterDto? chapter}) {
+    if (story != null) {
+      _story = story;
+      paragraphController.initializeWithText(story.content);
+      debugPrint("🟢 단편 초기화: storyId=${story.id}");
+    } else if (chapter != null) {
+      // 아직 내용을 직접 안 넣고, loadStory에서 chapterId로 fetch할 예정
+      debugPrint("🟡 장편 초기화: chapterId=${chapter.id}");
+    }
+    notifyListeners();
   }
 
   void initializeWithStory(StoryDto story) {
@@ -57,6 +78,7 @@ class StoryReadingProvider extends ChangeNotifier {
     required int id,
     String lang = 'ko',
     bool autoSpeak = true,
+    int? chapterId, // ✅ 추가
   }) async {
     await stopAll();
     if (_isLoading) return;
@@ -65,13 +87,17 @@ class StoryReadingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final fetched = await StoryApiService.fetchStoryDetail(id: id, lang: lang);
+      final fetched = await StoryApiService.fetchStoryDetail(
+        id: id,
+        lang: lang,
+        chapterId: chapterId, // ✅ 추가
+      );
       _story = fetched;
       paragraphController.initializeWithText(fetched.content);
       debugPrint("📥 Story loaded: id=${fetched.id}, lang=${fetched.languageCode}");
 
       if (autoSpeak && !recorder.shouldBlockTts) {
-        Future.delayed(Duration(milliseconds: 100), () => speakFromCurrent());
+        Future.delayed(const Duration(milliseconds: 100), () => speakFromCurrent());
       }
     } catch (e) {
       debugPrint("❌ 스토리 로딩 실패: $e");
@@ -81,6 +107,7 @@ class StoryReadingProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
 
   Future<void> speakFromCurrent() async {
     if (paragraphs.isEmpty || recorder.shouldBlockTts) {
@@ -260,6 +287,7 @@ class StoryReadingProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
 
   @override
   void dispose() {

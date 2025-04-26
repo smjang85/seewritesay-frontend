@@ -14,6 +14,9 @@ class TtsController {
   /// 외부에서 상태 변경을 감지할 수 있는 콜백
   void Function(TtsState state)? onStateChanged;
 
+  /// 한 문단 낭독 완료 후 실행될 콜백
+  VoidCallback? onComplete;
+
   TtsController() {
     _initTTS();
   }
@@ -67,6 +70,9 @@ class TtsController {
     _tts.setCompletionHandler(() {
       _setState(TtsState.stopped);
       _completeIfPending();
+      if (onComplete != null) {
+        onComplete!();
+      }
     });
     _tts.setPauseHandler(() {
       _setState(TtsState.paused);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:see_write_say/core/presentation/components/common/common_empty_message.dart';
+import 'package:see_write_say/core/presentation/theme/text_styles.dart';
 import 'package:see_write_say/features/story/providers/story_main_provider.dart';
 import 'package:see_write_say/core/helpers/system/navigation_helpers.dart';
 import 'package:see_write_say/core/presentation/components/common/common_image_viewer.dart'; // ✅ import
@@ -25,7 +26,15 @@ class _StoryMainContent extends StatelessWidget {
     final provider = context.watch<StoryMainProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('아이들을 위한 스토리')),
+      appBar: AppBar(
+        title: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: '아이들을 위한 이야기', style: kHeadingTextStyle),
+            ],
+          ),
+        ),
+      ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null
@@ -47,10 +56,7 @@ class _StoryMainContent extends StatelessWidget {
         itemBuilder: (context, index) {
           final story = provider.stories[index];
           return GestureDetector(
-            onTap: () => NavigationHelpers.goToStoryReadingScreen(
-              context,
-              story,
-            ),
+            onTap: () => NavigationHelpers.goToStoryByType(context, story),
             child: Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
